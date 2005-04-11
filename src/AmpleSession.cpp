@@ -688,6 +688,7 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
       layer->mDefaultInt = defaultInt;
       layer->mDefaultReal = defaultReal;
       layer->mName = name;
+      layer->updateData();
     }
     else
     {
@@ -697,7 +698,8 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
       // NOTE: This is bad. Don't do this.
       receiveGeometryLayerDestroy(data, ID, layerID);
 
-      // TODO: Create the new layer.
+      // NOTE: This is bad. Don't do this.
+      receiveGeometryLayerCreate(data, ID, layerID, name, type, defaultInt, defaultReal);
 
       verse_send_g_layer_subscribe(ID, layerID, VN_FORMAT_REAL64);
     }
@@ -708,6 +710,7 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
 
     GeometryLayer* layer = new GeometryLayer(layerID, name, type, *node, defaultInt, defaultReal);
     node->mLayers.push_back(layer);
+    node->updateStructure();
 
     if (layer->getName().length() > 0)
     {
