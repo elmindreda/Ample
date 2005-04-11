@@ -1,0 +1,4 @@
+Simple C++ retained mode library for verse.
+
+I know that the internals aren't very OO yet. I wanted to let the API settle before I did that.
+
