@@ -10,6 +10,9 @@ namespace verse
 
 //---------------------------------------------------------------------
 
+namespace
+{
+
 struct Slot
 {
   union
@@ -20,6 +23,20 @@ struct Slot
   };
 };
 
+template <typename T>
+inline void copySlot(T* target, const T* source, size_t count, T defaultValue, bool useDefault = false)
+{
+  while (count--)
+  {
+    if (useDefault)
+      *target++ = defaultValue;
+    else
+      *target++ = *source++;
+  }
+}
+
+}
+
 //---------------------------------------------------------------------
 
 void GeometryLayer::destroy(void)
@@ -29,47 +46,19 @@ void GeometryLayer::destroy(void)
   mNode.getSession().pop();
 }
 
-void GeometryLayer::deleteSlot(uint32 slotID)
-{
-  mNode.getSession().push();
-  if (isVertex())
-    verse_send_g_vertex_delete_real64(mNode.getID(), slotID);
-  else
-    verse_send_g_polygon_delete(mNode.getID(), slotID);
-  mNode.getSession().pop();
-}
-
-bool GeometryLayer::isVertex(void) const
-{
-  switch (mType)
-  {
-    case VN_G_LAYER_VERTEX_XYZ:
-    case VN_G_LAYER_VERTEX_UINT32:
-    case VN_G_LAYER_VERTEX_REAL:
-      return true;
-  }
-
-  return false;
-}
-
-bool GeometryLayer::isPolygon(void) const
-{
-  switch (mType)
-  {
-    case VN_G_LAYER_POLYGON_CORNER_UINT32:
-    case VN_G_LAYER_POLYGON_CORNER_REAL:
-    case VN_G_LAYER_POLYGON_FACE_UINT8:
-    case VN_G_LAYER_POLYGON_FACE_UINT32:
-    case VN_G_LAYER_POLYGON_FACE_REAL:
-      return true;
-  }
-
-  return false;
-}
-
 VLayerID GeometryLayer::getID(void) const
 {
   return mID;
+}
+
+GeometryLayer::Stack GeometryLayer::getStack(void) const
+{
+  return mStack;
+}
+
+VNRealFormat GeometryLayer::getRealFormat(void) const
+{
+  return mFormat;
 }
 
 void GeometryLayer::setName(const std::string& name)
@@ -94,26 +83,23 @@ VNGLayerType GeometryLayer::getType(void) const
   return mType;
 }
   
-bool GeometryLayer::getSlot(uint32 index, void* data) const
+bool GeometryLayer::getSlot(uint32 slotID, void* data) const
 {
-  if (isVertex())
+  if (mStack == VERTEX)
   {
-    if (!mNode.isVertex(index))
+    if (!mNode.isVertex(slotID))
       return false;
   }
   else
   {
-    if (!mNode.isPolygon(index))
+    if (!mNode.isPolygon(slotID))
       return false;
   }
   
-  unsigned int slotSize = getTypeSize(mType);
-  off_t offset = index * slotSize;
+  bool defaults = (slotID >= mData.getItemCount());
 
-  bool defaults = offset + slotSize > mData.getCount();
-
-  Slot* sourceSlot = reinterpret_cast<Slot*>(mData.getItems() + offset);
   Slot* targetSlot = reinterpret_cast<Slot*>(data);
+  const Slot* sourceSlot = reinterpret_cast<const Slot*>(mData.getItem(slotID));
 
   switch (mType)
   {
@@ -122,13 +108,11 @@ bool GeometryLayer::getSlot(uint32 index, void* data) const
     case VN_G_LAYER_POLYGON_CORNER_REAL:
     case VN_G_LAYER_POLYGON_FACE_REAL:
     {
-      for (unsigned int i = 0;  i < getTypeElementCount(mType);  i++)
-      {
-	if (defaults)
-	  targetSlot->real[i] = mDefaultReal;
-	else
-	  targetSlot->real[i] = sourceSlot->real[i];
-      }
+      copySlot(targetSlot->real,
+               sourceSlot->real,
+	       getTypeElementCount(mType),
+	       mDefaultReal,
+	       defaults);
       break;
     }
 
@@ -136,25 +120,21 @@ bool GeometryLayer::getSlot(uint32 index, void* data) const
     case VN_G_LAYER_POLYGON_CORNER_UINT32:
     case VN_G_LAYER_POLYGON_FACE_UINT32:
     {
-      for (unsigned int i = 0;  i < getTypeElementCount(mType);  i++)
-      {
-	if (defaults)
-	  targetSlot->uint[i] = mDefaultInt;
-	else
-	  targetSlot->uint[i] = sourceSlot->uint[i];
-      }
+      copySlot(targetSlot->uint,
+               sourceSlot->uint,
+	       getTypeElementCount(mType),
+	       mDefaultInt,
+	       defaults);
       break;
     }
     
     case VN_G_LAYER_POLYGON_FACE_UINT8:
     {
-      for (unsigned int i = 0;  i < getTypeElementCount(mType);  i++)
-      {
-	if (defaults)
-	  targetSlot->byte[i] = mDefaultInt;
-	else
-	  targetSlot->byte[i] = sourceSlot->byte[i];
-      }
+      copySlot(targetSlot->byte,
+               sourceSlot->byte,
+	       getTypeElementCount(mType),
+	       (uint8) mDefaultInt,
+	       defaults);
       break;
     }
   }
@@ -162,65 +142,91 @@ bool GeometryLayer::getSlot(uint32 index, void* data) const
   return true;
 }
 
-void GeometryLayer::setSlot(uint32 index, const void* data)
+void GeometryLayer::setSlot(uint32 slotID, const void* data)
 {
   mNode.getSession().push();
+
+  const Slot* slot = reinterpret_cast<const Slot*>(data);
 
   switch (mType)
   {
     case VN_G_LAYER_VERTEX_XYZ:
     {
-      const real64* values = reinterpret_cast<const real64*>(data);
-      verse_send_g_vertex_set_xyz_real64(mNode.getID(), mID, index, values[0], values[1], values[2]);
+      verse_send_g_vertex_set_xyz_real64(mNode.getID(),
+                                         mID,
+					 slotID,
+					 slot->real[0],
+					 slot->real[1],
+					 slot->real[2]);
       break;
     }
 
     case VN_G_LAYER_VERTEX_UINT32:
     {
-      const uint32* value = reinterpret_cast<const uint32*>(data);
-      verse_send_g_vertex_set_uint32(mNode.getID(), mID, index, *value);
+      verse_send_g_vertex_set_uint32(mNode.getID(),
+                                     mID,
+				     slotID,
+				     slot->uint[0]);
       break;
     }
 
     case VN_G_LAYER_VERTEX_REAL:
     {
-      const real64* value = reinterpret_cast<const real64*>(data);
-      verse_send_g_vertex_set_real64(mNode.getID(), mID, index, *value);
+      verse_send_g_vertex_set_real64(mNode.getID(),
+                                     mID,
+				     slotID,
+				     slot->real[0]);
       break;
     }
     
     case VN_G_LAYER_POLYGON_CORNER_UINT32:
     {
-      const uint32* values = reinterpret_cast<const uint32*>(data);
-      verse_send_g_polygon_set_corner_uint32(mNode.getID(), mID, index, values[0], values[1], values[2], values[3]);
+      verse_send_g_polygon_set_corner_uint32(mNode.getID(),
+					     mID,
+					     slotID,
+					     slot->uint[0],
+					     slot->uint[1],
+					     slot->uint[2],
+					     slot->uint[3]);
       break;
     }
     
     case VN_G_LAYER_POLYGON_CORNER_REAL:
     {
-      const real64* values = reinterpret_cast<const real64*>(data);
-      verse_send_g_polygon_set_corner_real64(mNode.getID(), mID, index, values[0], values[1], values[2], values[3]);
+      verse_send_g_polygon_set_corner_real64(mNode.getID(),
+                                             mID,
+					     slotID,
+					     slot->real[0],
+					     slot->real[1],
+					     slot->real[2],
+					     slot->real[3]);
       break;
     }
     
     case VN_G_LAYER_POLYGON_FACE_UINT8:
     {
-      const uint8* value = reinterpret_cast<const uint8*>(data);
-      verse_send_g_polygon_set_face_uint8(mNode.getID(), mID, index, *value);
+      verse_send_g_polygon_set_face_uint8(mNode.getID(),
+                                          mID,
+					  slotID,
+					  slot->byte[0]);
       break;
     }
 
     case VN_G_LAYER_POLYGON_FACE_UINT32:
     {
-      const uint32* value = reinterpret_cast<const uint32*>(data);
-      verse_send_g_polygon_set_face_uint32(mNode.getID(), mID, index, *value);
+      verse_send_g_polygon_set_face_uint32(mNode.getID(),
+                                           mID,
+					   slotID,
+					   slot->uint[0]);
       break;
     }
 
     case VN_G_LAYER_POLYGON_FACE_REAL:
     {
-      const real64* value = reinterpret_cast<const real64*>(data);
-      verse_send_g_polygon_set_face_real64(mNode.getID(), mID, index, *value);
+      verse_send_g_polygon_set_face_real64(mNode.getID(),
+                                           mID,
+					   slotID,
+					   slot->real[0]);
       break;
     }
   }
@@ -251,20 +257,76 @@ GeometryLayer::GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType 
   mDefaultInt(defaultInt),
   mDefaultReal(defaultReal)
 {
+  mData.setItemSize(getTypeSize(mType));
+  mData.setGranularity(1024);
+
+  switch (mType)
+  {
+    case VN_G_LAYER_VERTEX_XYZ:
+    case VN_G_LAYER_VERTEX_UINT32:
+    case VN_G_LAYER_VERTEX_REAL:
+    {
+      mStack = VERTEX;
+      break;
+    }
+
+    default:
+    {
+      mStack = POLYGON;
+      break;
+    }
+  }
 }
 
-void GeometryLayer::reserve(unsigned int count)
+void GeometryLayer::reserve(size_t slotCount)
 {
-  unsigned int slotSize = getTypeSize(mType);
-  
-  if (mData.getCount() < count * slotSize)
+  if (slotCount > mData.getItemCount())
   {
-    unsigned int extra = count - mData.getCount() / slotSize;
+    size_t baseCount = mData.getItemCount();
 
-    mData.reserve(count * slotSize);
+    mData.reserve(slotCount);
 
-    for (unsigned int i = 0;  i < extra;  i++)
+    for (unsigned int i = baseCount;  i < slotCount;  i++)
     {
+      Slot* targetSlot = reinterpret_cast<Slot*>(mData.getItem(i));
+
+      switch (mType)
+      {
+	case VN_G_LAYER_VERTEX_XYZ:
+	case VN_G_LAYER_VERTEX_REAL:
+	case VN_G_LAYER_POLYGON_CORNER_REAL:
+	case VN_G_LAYER_POLYGON_FACE_REAL:
+	{
+	  copySlot(targetSlot->real,
+		   (real64*) NULL,
+		   getTypeElementCount(mType),
+		   mDefaultReal,
+		   true);
+	  break;
+	}
+
+	case VN_G_LAYER_VERTEX_UINT32:
+	case VN_G_LAYER_POLYGON_CORNER_UINT32:
+	case VN_G_LAYER_POLYGON_FACE_UINT32:
+	{
+	  copySlot(targetSlot->uint,
+		   (uint32*) NULL,
+		   getTypeElementCount(mType),
+		   mDefaultInt,
+		   true);
+	  break;
+	}
+	
+	case VN_G_LAYER_POLYGON_FACE_UINT8:
+	{
+	  copySlot(targetSlot->byte,
+		   (uint8*) NULL,
+		   getTypeElementCount(mType),
+		   (uint8) mDefaultInt,
+		   true);
+	  break;
+	}
+      }
     }
   }
 }
@@ -292,9 +354,27 @@ unsigned int GeometryLayer::getTypeSize(VNGLayerType type)
   }
 }
 
+unsigned int GeometryLayer::getTypeElementCount(VNGLayerType type)
+{
+  switch (type)
+  {
+    case VN_G_LAYER_VERTEX_UINT32:
+    case VN_G_LAYER_VERTEX_REAL:
+    case VN_G_LAYER_POLYGON_FACE_UINT8:
+    case VN_G_LAYER_POLYGON_FACE_UINT32:
+    case VN_G_LAYER_POLYGON_FACE_REAL:
+      return 1;
+    case VN_G_LAYER_VERTEX_XYZ:
+      return 3;
+    case VN_G_LAYER_POLYGON_CORNER_UINT32:
+    case VN_G_LAYER_POLYGON_CORNER_REAL:
+      return 4;
+  }
+}
+
 //---------------------------------------------------------------------
 
-void GeometryLayerObserver::onSetSlot(GeometryLayer& layer, uint16 slotID, const void* data)
+void GeometryLayerObserver::onSetSlot(GeometryLayer& layer, uint32 slotID, const void* data)
 {
 }
 
@@ -357,72 +437,133 @@ const GeometryLayer* GeometryNode::getLayerByName(const std::string& name) const
   return NULL;
 }
 
-bool GeometryNode::isVertex(uint32 index) const
+bool GeometryNode::isVertex(uint32 vertexID) const
 {
-  if (index >= mValidVertices.size())
+  if (!mBaseVertexLayer)
     return false;
 
-  return mValidVertices[index];
-}
-
-bool GeometryNode::isPolygon(uint32 index) const
-{
-  if (index >= mValidPolygons.size())
+  const BaseVertex* vertex = reinterpret_cast<BaseVertex*>(mBaseVertexLayer->mData.getItem(vertexID));
+  if (!vertex)
     return false;
 
-  return mValidPolygons[index];
+  if (vertex->x == V_REAL64_MAX && vertex->y == V_REAL64_MAX && vertex->z == V_REAL64_MAX)
+    return false;
+
+  return true;
 }
 
-bool GeometryNode::getVertex(uint32 index, void* data) const
+bool GeometryNode::isPolygon(uint32 polygonID) const
 {
-  uint8* target = reinterpret_cast<uint8*>(data);
+  if (!mBasePolygonLayer)
+    return false;
 
-  for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
+  const BasePolygon* polygon = reinterpret_cast<BasePolygon*>(mBasePolygonLayer->mData.getItem(polygonID));
+  if (!polygon)
+    return false;
+
+  for (unsigned int i = 0;  i < 3;  i++)
   {
-    GeometryLayer* layer = *i;
-    if (layer->isVertex())
-    {
-      layer->getSlot(index, target);
-      target += layer->getSlotSize();
-    }
+    if (!isVertex(polygon->mIndices[i]))
+      return false;
   }
+
+  return true;
 }
 
-bool GeometryNode::getPolygon(uint32 index, void* data) const
+bool GeometryNode::getBaseVertex(uint32 vertexID, BaseVertex& vertex) const
 {
-  uint8* target = reinterpret_cast<uint8*>(data);
+  if (!mBaseVertexLayer)
+    return false;
 
-  for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
-  {
-    GeometryLayer* layer = *i;
-    if (layer->isPolygon())
-    {
-      layer->getSlot(index, target);
-      target += layer->getSlotSize();
-    }
-  }
+  const BaseVertex* result = reinterpret_cast<BaseVertex*>(mBaseVertexLayer->mData.getItem(vertexID));
+  if (!result)
+    return false;
+
+  if (result->x == V_REAL64_MAX && result->y == V_REAL64_MAX && result->z == V_REAL64_MAX)
+    return false;
+
+  vertex = *result;
+  return true;
 }
 
-unsigned int GeometryNode::getVertexSize(void) const
+bool GeometryNode::getBasePolygon(uint32 polygonID, BasePolygon& polygon) const
+{
+  if (!mBasePolygonLayer)
+    return false;
+
+  const BasePolygon* result = reinterpret_cast<BasePolygon*>(mBasePolygonLayer->mData.getItem(polygonID));
+  if (!result)
+    return false;
+
+  for (unsigned int i = 0;  i < 3;  i++)
+  {
+    if (!isVertex(result->mIndices[i]))
+      return false;
+  }
+
+  polygon = *result;
+  return true;
+}
+
+void GeometryNode::setBaseVertex(uint32 vertexID, const BaseVertex& vertex)
+{
+  getSession().push();
+  verse_send_g_vertex_set_xyz_real64(getID(),
+                                     0,
+				     vertexID,
+				     vertex.x,
+				     vertex.y,
+				     vertex.z);
+  getSession().pop();
+}
+
+void GeometryNode::setBasePolygon(uint32 polygonID, const BasePolygon& polygon)
+{
+  getSession().push();
+  verse_send_g_polygon_set_corner_uint32(getID(),
+                                         1,
+					 polygonID,
+					 polygon.mIndices[0],
+					 polygon.mIndices[1],
+					 polygon.mIndices[2],
+					 polygon.mIndices[3]);
+  getSession().pop();
+}
+
+void GeometryNode::deleteVertex(uint32 vertexID)
+{
+  getSession().push();
+  verse_send_g_vertex_delete_real64(getID(), vertexID);
+  getSession().pop();
+}
+
+void GeometryNode::deletePolygon(uint32 polygonID)
+{
+  getSession().push();
+  verse_send_g_polygon_delete(getID(), polygonID);
+  getSession().pop();
+}
+
+size_t GeometryNode::getVertexSize(void) const
 {
   unsigned int size = 0;
 
   for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
   {
-    if ((*i)->isVertex())
+    if ((*i)->getStack() == GeometryLayer::VERTEX)
       size += (*i)->getSlotSize();
   }
 
   return size;
 }
 
-unsigned int GeometryNode::getPolygonSize(void) const
+size_t GeometryNode::getPolygonSize(void) const
 {
   unsigned int size = 0;
 
   for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
   {
-    if ((*i)->isPolygon())
+    if ((*i)->getStack() == GeometryLayer::POLYGON)
       size += (*i)->getSlotSize();
   }
 
@@ -430,17 +571,38 @@ unsigned int GeometryNode::getPolygonSize(void) const
 }
 
 GeometryNode::GeometryNode(VNodeID ID, VNodeOwner owner, Session& session):
-  Node(ID, V_NT_GEOMETRY, owner, session)
+  Node(ID, V_NT_GEOMETRY, owner, session),
+  mBaseVertexLayer(NULL),
+  mBasePolygonLayer(NULL)
 {
 }
 
 GeometryNode::~GeometryNode(void)
 {
-  for (LayerList::iterator i = mLayers.begin();  i != mLayers.end();  i++)
-    delete *i;
+  while (mLayers.size())
+  {
+    delete mLayers.back();
+    mLayers.pop_back();
+  }
 }
 
 //---------------------------------------------------------------------
+
+void GeometryNodeObserver::onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
+{
+}
+
+void GeometryNodeObserver::onDeleteVertex(GeometryNode& node, uint32 vertexID)
+{
+}
+  
+void GeometryNodeObserver::onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+{
+}
+
+void GeometryNodeObserver::onDeletePolygon(GeometryNode& node, uint32 polygonID)
+{
+}
 
 void GeometryNodeObserver::onCreateLayer(GeometryNode& node, GeometryLayer& layer)
 {

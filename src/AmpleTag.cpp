@@ -89,6 +89,10 @@ void TagObserver::onChange(Tag& tag)
 {
 }
 
+void TagObserver::onSetName(Tag& tag, const std::string name)
+{
+}
+
 //---------------------------------------------------------------------
 
 void TagGroup::destroy(void)

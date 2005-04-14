@@ -1,4 +1,5 @@
 
+#include <new>
 
 #include <verse.h>
 
@@ -8,6 +9,35 @@ namespace verse
 {
   namespace ample
   {
+
+//---------------------------------------------------------------------
+
+namespace
+{
+
+struct Slot
+{
+  union
+  {
+    real64 real[4];
+    uint32 uint[4];
+    uint8 byte[4];
+  };
+};
+
+template <typename T>
+inline void copySlot(T* target, const T* source, size_t count, T defaultValue = 0, bool useDefault = false)
+{
+  while (count--)
+  {
+    if (useDefault)
+      *target++ = defaultValue;
+    else
+      *target++ = *source++;
+  }
+}
+
+}
 
 //---------------------------------------------------------------------
 
@@ -584,7 +614,7 @@ void Session::receiveNodeLanguageSet(void* user, VNodeID ID, const char* languag
   node->updateData();
 }
 
-void Session::receiveTextBufferCreate(void* user, VNodeID ID, uint16 bufferID, const char* name)
+void Session::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name)
 {
   Session* session = getCurrent();
 
@@ -618,7 +648,7 @@ void Session::receiveTextBufferCreate(void* user, VNodeID ID, uint16 bufferID, c
   }
 }
 
-void Session::receiveTextBufferDestroy(void* user, VNodeID ID, VNMBufferID bufferID)
+void Session::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferID)
 {
   Session* session = getCurrent();
 
@@ -647,7 +677,7 @@ void Session::receiveTextBufferDestroy(void* user, VNodeID ID, VNMBufferID buffe
   }
 }
 
-void Session::receiveTextBufferSet(void* user, VNodeID ID, VNMBufferID bufferID, uint32 position, uint32 length, const char* text)
+void Session::receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID, uint32 position, uint32 length, const char* text)
 {
   Session* session = getCurrent();
 
@@ -681,6 +711,9 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
   {
     if (layer->getType() == type)
     {
+      // This was a "change name" command.
+      // NOTE: We don't care about announcing changes in default values. Who does?
+
       const GeometryLayer::ObserverList& observers = layer->mObservers;
       for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*layer, name);
@@ -700,8 +733,6 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
 
       // NOTE: This is bad. Don't do this.
       receiveGeometryLayerCreate(data, ID, layerID, name, type, defaultInt, defaultReal);
-
-      verse_send_g_layer_subscribe(ID, layerID, VN_FORMAT_REAL64);
     }
   }
   else
@@ -712,21 +743,19 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
     node->mLayers.push_back(layer);
     node->updateStructure();
 
-    if (layer->getName().length() > 0)
+    if (layer->getID() == 0)
+      node->mBaseVertexLayer = layer;
+    else if (layer->getID() == 1)
+      node->mBasePolygonLayer = layer;
+
+    const Node::ObserverList& observers = node->mObservers;
+    for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     {
-      // Only notify observers if this is an "official" creation.
-      // I.e. don't notify if we're only pre-creating the layer.
-
-      const Node::ObserverList& observers = node->mObservers;
-      for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      {
-	if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
-	  observer->onCreateLayer(*node, *layer);
-      }
-
-      // Only subscribe if we've actually received the command from the server
-      verse_send_g_layer_subscribe(ID, layerID, VN_FORMAT_REAL64);
+      if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+	observer->onCreateLayer(*node, *layer);
     }
+
+    verse_send_g_layer_subscribe(ID, layerID, VN_FORMAT_REAL64);
   }
 }
 
@@ -752,6 +781,8 @@ void Session::receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layer
       
       delete *layer;
       layers.erase(layer);
+
+      node->updateStructure();
       break;
     }
   }
@@ -759,12 +790,10 @@ void Session::receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layer
 
 void Session::receiveVertexSetXyzReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 x, real32 y, real32 z)
 {
-  receiveVertexSetXyzReal64(user, nodeID, layerID, vertexID, x, y, z);
 }
 
 void Session::receiveVertexDeleteReal32(void* user, VNodeID nodeID, uint32 vertexID)
 {
-  receiveVertexDeleteReal64(user, nodeID, vertexID);
 }
 
 void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 x, real64 y, real64 z)
@@ -776,33 +805,37 @@ void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID lay
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (layer)
-  {
-    // We don't trust the server *that* far yet. (Should we?)
+  if (!layer || layer->getType() != VN_G_LAYER_VERTEX_XYZ)
+    return;
+  
+  BaseVertex vertex(x, y, z);
 
-    if (layer->getType() != VN_G_LAYER_VERTEX_XYZ)
-      return;
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, vertexID, &vertex);
+
+  bool created = (layerID == 0 && node->isVertex(vertexID));
+
+  layer->reserve(vertexID + 1);
+
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
+  targetSlot.real[0] = vertex.x;
+  targetSlot.real[1] = vertex.y;
+  targetSlot.real[2] = vertex.z;
+
+  if (created)
+  {
+    layer->updateStructure();
+
+    const GeometryNode::ObserverList& observers = node->mObservers;
+    for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+	observer->onCreateVertex(*node, vertexID, vertex);
+    }
   }
   else
-  {
-    receiveGeometryLayerCreate(user, nodeID, layerID, "", VN_G_LAYER_VERTEX_XYZ, 0, 0.0);
-    layer = node->getLayerByID(layerID);
-
-    Vector3 value(x, y, z);
-
-    const GeometryLayer::ObserverList& observers = layer->mObservers;
-    for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      (*i)->onSetSlot(*layer, vertexID, &value);
-  }
-
-  layer->mData.reserve(layer->getSlotSize() * vertexID);
-
-  if (node->mValidVertices.size() < vertexID)
-    node->mValidVertices.insert(node->mValidVertices.end(), vertexID - node->mValidVertices.size(), false);
-  node->mValidVertices[vertexID] = true;
-
-  Vector3* target = reinterpret_cast<Vector3*>(layer->mData.getItems());
-  target->set(x, y, z);
+    layer->updateData();
 }
 
 void Session::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 vertexID)
@@ -810,19 +843,22 @@ void Session::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 verte
   Session* session = getCurrent();
 
   GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
-  if (!node)
+  if (!node || !node->mBaseVertexLayer)
     return;
 
-  GeometryNode::LayerList& layers = node->mLayers;
-  for (GeometryNode::LayerList::iterator i = layers.begin();  i != layers.end();  i++)
+  BaseVertex* vertex = reinterpret_cast<BaseVertex*>(node->mBaseVertexLayer->mData.getItem(vertexID));
+  if (!vertex || !vertex->isValid())
+    return;
+
+  const GeometryNode::ObserverList& observers = node->mObservers;
+  for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
   {
-    GeometryLayer* layer = *i;
-    if (layer->isVertex())
-    {
-      if (node->mValidVertices.size() >= vertexID)
-	node->mValidVertices[vertexID] = false;
-    }
+    if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+      observer->onDeleteVertex(*node, vertexID);
   }
+
+  vertex->setInvalid();
+  node->mBaseVertexLayer->updateStructure();
 }
 
 void Session::receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, uint32 value)
@@ -834,27 +870,18 @@ void Session::receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID layerI
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (layer)
-  {
-    // We don't trust the server *that* far yet.
+  if (!layer || layer->getType() != VN_G_LAYER_VERTEX_UINT32)
+    return;
+  
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, vertexID, &value);
 
-    if (layer->getType() != VN_G_LAYER_VERTEX_UINT32)
-      return;
-  }
-  else
-  {
-    receiveGeometryLayerCreate(user, nodeID, layerID, "", VN_G_LAYER_VERTEX_UINT32, 0, 0.0);
-    layer = node->getLayerByID(layerID);
-  }
+  layer->reserve(vertexID + 1);
+  layer->updateData();
 
-  layer->mData.reserve(layer->getSlotSize() * vertexID);
-
-  if (node->mValidVertices.size() < vertexID)
-    node->mValidVertices.insert(node->mValidVertices.end(), vertexID - node->mValidVertices.size(), false);
-  node->mValidVertices[vertexID] = true;
-
-  uint32* target = reinterpret_cast<uint32*>(layer->mData.getItems());
-  *target = value;
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
+  targetSlot.uint[0] = value;
 }
 
 void Session::receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 value)
@@ -866,32 +893,22 @@ void Session::receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID layerI
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (layer)
-  {
-    // We don't trust the server *that* far yet.
+  if (!layer || layer->getType() != VN_G_LAYER_VERTEX_REAL)
+    return;
+  
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, vertexID, &value);
 
-    if (layer->getType() != VN_G_LAYER_VERTEX_REAL)
-      return;
-  }
-  else
-  {
-    receiveGeometryLayerCreate(user, nodeID, layerID, "", VN_G_LAYER_VERTEX_REAL, 0, 0.0);
-    layer = node->getLayerByID(layerID);
-  }
+  layer->reserve(vertexID + 1);
+  layer->updateData();
 
-  layer->mData.reserve(layer->getSlotSize() * vertexID);
-
-  if (node->mValidVertices.size() < vertexID)
-    node->mValidVertices.insert(node->mValidVertices.end(), vertexID - node->mValidVertices.size(), false);
-  node->mValidVertices[vertexID] = true;
-
-  real64* target = reinterpret_cast<real64*>(layer->mData.getItems());
-  *target = value;
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
+  targetSlot.real[0] = value;
 }
 
 void Session::receiveVertexSetReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 value)
 {
-  receiveVertexSetReal64(user, nodeID, layerID, vertexID, value);
 }
 
 void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 v0, uint32 v1, uint32 v2, uint32 v3)
@@ -903,30 +920,35 @@ void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (layer)
-  {
-    // We don't trust the server *that* far yet.
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_CORNER_UINT32)
+    return;
+  
+  BasePolygon polygon(v0, v1, v2, v3);
 
-    if (layer->getType() != VN_G_LAYER_POLYGON_CORNER_UINT32)
-      return;
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, polygonID, &polygon);
+
+  bool created = (layerID == 1 && node->isPolygon(polygonID));
+
+  layer->reserve(polygonID + 1);
+
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
+  copySlot(targetSlot.uint, polygon.mIndices, 4);
+
+  if (created)
+  {
+    layer->updateStructure();
+
+    const GeometryNode::ObserverList& observers = node->mObservers;
+    for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+	observer->onCreatePolygon(*node, polygonID, polygon);
+    }
   }
   else
-  {
-    receiveGeometryLayerCreate(user, nodeID, layerID, "", VN_G_LAYER_POLYGON_CORNER_UINT32, 0, 0.0);
-    layer = node->getLayerByID(layerID);
-  }
-
-  if (node->mValidPolygons.size() < polygonID)
-    node->mValidPolygons.insert(node->mValidPolygons.end(), polygonID - node->mValidPolygons.size(), false);
-  node->mValidPolygons[polygonID] = true;
-
-  layer->mData.reserve(layer->getSlotSize() * polygonID);
-
-  uint32* target = reinterpret_cast<uint32*>(layer->mData.getItems());
-  target[polygonID * 4 + 0] = v0;
-  target[polygonID * 4 + 1] = v1;
-  target[polygonID * 4 + 2] = v2;
-  target[polygonID * 4 + 3] = v3;
+    layer->updateData();
 }
 
 void Session::receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID)
@@ -934,20 +956,22 @@ void Session::receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID)
   Session* session = getCurrent();
 
   GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
-  if (!node)
+  if (!node || !node->mBasePolygonLayer)
     return;
 
-  GeometryNode::LayerList& layers = node->mLayers;
+  BasePolygon* polygon = reinterpret_cast<BasePolygon*>(node->mBasePolygonLayer->mData.getItem(polygonID));
+  if (!polygon)
+    return;
 
-  for (GeometryNode::LayerList::iterator i = layers.begin();  i != layers.end();  i++)
+  const GeometryNode::ObserverList& observers = node->mObservers;
+  for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
   {
-    GeometryLayer* layer = *i;
-    if (layer->isPolygon())
-    {
-      if (node->mValidPolygons.size() >= polygonID)
-	node->mValidPolygons[polygonID] = false;
-    }
+    if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+      observer->onDeletePolygon(*node, polygonID);
   }
+
+  polygon->setInvalid();
+  node->mBasePolygonLayer->updateStructure();
 }
 
 void Session::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 v0, real64 v1, real64 v2, real64 v3)
@@ -959,52 +983,101 @@ void Session::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VLayerID
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (layer)
-  {
-    // We don't trust the server *that* far yet.
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_CORNER_UINT32)
+    return;
+  
+  Slot sourceSlot;
+  sourceSlot.real[0] = v0;
+  sourceSlot.real[1] = v1;
+  sourceSlot.real[2] = v2;
+  sourceSlot.real[3] = v3;
 
-    if (layer->getType() != VN_G_LAYER_POLYGON_CORNER_REAL)
-      return;
-  }
-  else
-  {
-    receiveGeometryLayerCreate(user, nodeID, layerID, "", VN_G_LAYER_POLYGON_CORNER_REAL, 0, 0.0);
-    layer = node->getLayerByID(layerID);
-  }
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, polygonID, &sourceSlot);
 
-  layer->mData.reserve(layer->getSlotSize() * polygonID);
+  layer->reserve(polygonID + 1);
+  layer->updateData();
 
-  if (node->mValidPolygons.size() < polygonID)
-    node->mValidPolygons.insert(node->mValidPolygons.end(), polygonID - node->mValidPolygons.size(), false);
-  node->mValidPolygons[polygonID] = true;
-
-  real64* target = reinterpret_cast<real64*>(layer->mData.getItems());
-  target[polygonID * 4 + 0] = v0;
-  target[polygonID * 4 + 1] = v1;
-  target[polygonID * 4 + 2] = v2;
-  target[polygonID * 4 + 3] = v3;
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
+  copySlot(targetSlot.real, sourceSlot.real, 4);
 }
 
 void Session::receivePolygonSetCornerReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 v0, real32 v1, real32 v2, real32 v3)
 {
-  receivePolygonSetCornerReal64(user, nodeID, layerID, polygonID, v0, v1, v2, v3);
 }
 
 void Session::receivePolygonSetFaceUint8(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint8 value)
 {
+  Session* session = getCurrent();
+
+  GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  GeometryLayer* layer = node->getLayerByID(layerID);
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_FACE_UINT8)
+    return;
+  
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, polygonID, &value);
+
+  layer->reserve(polygonID + 1);
+  layer->updateData();
+
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
+  targetSlot.byte[0] = value;
 }
 
 void Session::receivePolygonSetFaceUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 value)
 {
+  Session* session = getCurrent();
+
+  GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  GeometryLayer* layer = node->getLayerByID(layerID);
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_FACE_UINT32)
+    return;
+  
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, polygonID, &value);
+
+  layer->reserve(polygonID + 1);
+  layer->updateData();
+
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
+  targetSlot.uint[0] = value;
 }
 
 void Session::receivePolygonSetFaceReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 value)
 {
+  Session* session = getCurrent();
+
+  GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  GeometryLayer* layer = node->getLayerByID(layerID);
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_FACE_REAL)
+    return;
+  
+  const GeometryLayer::ObserverList& observers = layer->mObservers;
+  for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetSlot(*layer, polygonID, &value);
+
+  layer->reserve(polygonID + 1);
+  layer->updateData();
+
+  Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
+  targetSlot.real[0] = value;
 }
 
 void Session::receivePolygonSetFaceReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 value)
 {
-  receivePolygonSetFaceReal64(user, nodeID, layerID, polygonID, value);
 }
 
 void Session::receiveCreaseSetVertex(void* user, VNodeID nodeID, const char *layer, uint32 def_crease)

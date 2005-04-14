@@ -28,7 +28,7 @@ void TextBuffer::destroy(void)
   session.pop();
 }
 
-uint16 TextBuffer::getID(void) const
+VBufferID TextBuffer::getID(void) const
 {
   return mID;
 }
@@ -66,7 +66,7 @@ TextNode& TextBuffer::getNode(void) const
   return mNode;
 }
 
-TextBuffer::TextBuffer(uint16 ID, const std::string& name, TextNode& node):
+TextBuffer::TextBuffer(VBufferID ID, const std::string& name, TextNode& node):
   mID(ID),
   mName(name),
   mNode(node)
@@ -92,7 +92,7 @@ void TextNode::createBuffer(const std::string& name)
   getSession().pop();
 }
 
-TextBuffer* TextNode::getBufferByID(uint16 ID)
+TextBuffer* TextNode::getBufferByID(VBufferID ID)
 {
   for (BufferList::iterator i = mBuffers.begin();  i != mBuffers.end();  i++)
     if ((*i)->getID() == ID)
@@ -101,7 +101,7 @@ TextBuffer* TextNode::getBufferByID(uint16 ID)
   return NULL;
 }
 
-const TextBuffer* TextNode::getBufferByID(uint16 ID) const
+const TextBuffer* TextNode::getBufferByID(VBufferID ID) const
 {
   for (BufferList::const_iterator i = mBuffers.begin();  i != mBuffers.end();  i++)
     if ((*i)->getID() == ID)

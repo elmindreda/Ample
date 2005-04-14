@@ -18,6 +18,10 @@ const uint32 INVALID_POLYGON_ID = ~0;
 
 //---------------------------------------------------------------------
 
+class BaseVertex;
+class BasePolygon;
+class BaseMesh;
+
 template <typename T, typename S>
 class Observer;
 template <typename T, typename S>
@@ -48,21 +52,69 @@ class SessionObserver;
 
 //---------------------------------------------------------------------
 
-class Polygon
+class BaseVertex
 {
 public:
+  BaseVertex(void);
+  BaseVertex(real64 sx, real64 sy, real64 sz);
+  bool isValid(void) const;
+  void set(real64 sx, real64 sy, real64 sz);
+  void setInvalid(void);
+  real64 x;
+  real64 y;
+  real64 z;
+};
+
+//---------------------------------------------------------------------
+
+class BasePolygon
+{
+public:
+  BasePolygon(void);
+  BasePolygon(uint32 v0, uint32 v1, uint32 v2, uint32 v3);
+  void set(uint32 v0, uint32 v1, uint32 v2, uint32 v3); 
+  void setInvalid(void);
   uint32 mIndices[4];
 };
 
 //---------------------------------------------------------------------
 
-class Mesh
+class BaseMesh
 {
 public:
-  typedef std::vector<Vector3> VertexList;
-  typedef std::vector<Polygon> PolygonList;
+  typedef std::vector<BaseVertex> VertexList;
+  typedef std::vector<BasePolygon> PolygonList;
   VertexList mVertices;
   PolygonList mPolygons;
+};
+
+//---------------------------------------------------------------------
+
+class Block
+{
+public:
+  Block(void);
+  Block(const Block& source);
+  ~Block(void);
+  void resize(size_t count);
+  void reserve(size_t count);
+  void release(void);
+  operator void* (void);
+  operator const void* (void) const;
+  Block& operator = (const Block& source);
+  void* getItem(size_t index);
+  const void* getItem(size_t index) const;
+  void setItem(void* item, size_t index);
+  size_t getItemSize(void) const;
+  void setItemSize(size_t size);
+  size_t getItemCount(void) const;
+  size_t getGranularity(void) const;
+  void setGranularity(size_t grain);
+private:
+  size_t mItemCount;
+  size_t mItemSize;
+  size_t mGrain;
+  uint8* mData;
 };
 
 //---------------------------------------------------------------------
@@ -240,6 +292,11 @@ public:
    *  @param tag The tag that changed.
    */
   virtual void onChange(Tag& tag);
+  /*! Called before an observed tag has its name changed.
+   *  @param group The observed tag.
+   *  @param name The new name of the tag.
+   */
+  virtual void onSetName(Tag& tag, const std::string name);
 };
 
 //---------------------------------------------------------------------
@@ -487,7 +544,7 @@ public:
   void destroy(void);
   /*! @return The ID of this text buffer.
    */
-  uint16 getID(void) const;
+  VBufferID getID(void) const;
   /*! @return The name of this text buffer.
    */
   const std::string& getName(void) const;
@@ -512,8 +569,8 @@ public:
    */
   TextNode& getNode(void) const;
 private:
-  TextBuffer(uint16 ID, const std::string& name, TextNode& node);
-  uint16 mID;
+  TextBuffer(VBufferID ID, const std::string& name, TextNode& node);
+  VBufferID mID;
   std::string mName;
   std::string mText;
   TextNode& mNode;
@@ -558,11 +615,11 @@ public:
   /*! @param ID The ID of the desired text buffer
    *  @return The text buffer with the specified ID, or @c NULL if no such text buffer exists.
    */
-  TextBuffer* getBufferByID(uint16 ID);
+  TextBuffer* getBufferByID(VBufferID ID);
   /*! @param ID The ID of the desired text buffer
    *  @return The text buffer with the specified ID, or @c NULL if no such text buffer exists.
    */
-  const TextBuffer* getBufferByID(uint16 ID) const;
+  const TextBuffer* getBufferByID(VBufferID ID) const;
   /*! @param index The index of the desired text buffer.
    *  @return The text buffer at the specified index, or @c NULL if no such text buffer exists.
    */
@@ -633,28 +690,19 @@ class GeometryLayer : public Versioned, public Observable<GeometryLayerObserver,
   friend class Session;
   friend class GeometryNode;
 public:
+  enum Stack { VERTEX, POLYGON };
   /*! Destroys this geometry layer.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
   void destroy(void);
-  /*! Deletes the specified slot.
-   *  @param slotID The ID of the slot to delete.
-   *  @remarks This call is asynchronous. It will not take effect
-   *  until, at the earliest, after the first subsequent call to
-   *  Session::update.
-   */
-  void deleteSlot(uint32 slotID);
-  /*! @return @c true if this layer contains vertex data, otherwise @c false.
-   */
-  bool isVertex(void) const;
-  /*! @return @c true if this layer contains polygon data, otherwise @c false.
-   */
-  bool isPolygon(void) const;
   /*! @return The ID of this geometry layer.
    */
   VLayerID getID(void) const;
+  /*! @return The stack in which this layer exists.
+   */
+  Stack getStack(void) const;
   VNRealFormat getRealFormat(void) const;
   /*! @return The name of this geometry layer.
    */
@@ -673,19 +721,19 @@ public:
    */
   VNGLayerType getType(void) const;
   /*! Retrieves the specified slot from this geometry layer.
-   *  @param index The index of the desired slot.
+   *  @param slotID The index of the desired slot.
    *  @param data The location to store the slot data.
    *  @return @c true if the slot exists, otherwise @c false.
    */
-  bool getSlot(uint32 index, void* data) const;
+  bool getSlot(uint32 slotID, void* data) const;
   /*! Changes the specified slot in this geometry layer.
-   *  @param index The index of the desired slot.
+   *  @param slotID The index of the desired slot.
    *  @param data The location to retrieve the slot data from.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
-  void setSlot(uint32 index, const void* data);
+  void setSlot(uint32 slotID, const void* data);
   /*! @return the default value for uninitialized integer slots.
    */
   uint32 getDefaultInt(void) const;
@@ -698,12 +746,13 @@ public:
 private:
   GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType type,
 		GeometryNode& node, uint32 defaultInt, real64 defaultReal);
-  void reserve(unsigned int count);
+  void reserve(size_t slotCount);
   static unsigned int getTypeSize(VNGLayerType type);
   static unsigned int getTypeElementCount(VNGLayerType type);
-  ByteBlock mData;
+  Block mData;
   VLayerID mID;
   std::string mName;
+  Stack mStack;
   VNGLayerType mType;
   VNRealFormat mFormat;
   GeometryNode& mNode;
@@ -723,7 +772,7 @@ public:
    *  @param slotID The ID of the slot to be changed.
    *  @param data The data to be written to the slot.
    */
-  virtual void onSetSlot(GeometryLayer& layer, uint16 slotID, const void* data);
+  virtual void onSetSlot(GeometryLayer& layer, uint32 slotID, const void* data);
   /*! Called before an observed geometry layer has its name changed.
    *  @param layer The observed geometry layer.
    *  @param name The new name of the geometry layer.
@@ -749,20 +798,23 @@ public:
   const GeometryLayer* getLayerByIndex(unsigned int index) const;
   GeometryLayer* getLayerByName(const std::string& name);
   const GeometryLayer* getLayerByName(const std::string& name) const;
-  bool isVertex(uint32 index) const;
-  bool isPolygon(uint32 index) const;
-  bool getVertex(uint32 index, void* data) const;
-  bool getPolygon(uint32 index, void* data) const;
-  unsigned int getVertexSize(void) const;
-  unsigned int getPolygonSize(void) const;
+  bool isVertex(uint32 vertexID) const;
+  bool isPolygon(uint32 polygonID) const;
+  bool getBaseVertex(uint32 vertexID, BaseVertex& vertex) const;
+  bool getBasePolygon(uint32 polygonID, BasePolygon& polygon) const;
+  void setBaseVertex(uint32 vertexID, const BaseVertex& vertex);
+  void setBasePolygon(uint32 polygonID, const BasePolygon& polygon);
+  void deleteVertex(uint32 vertexID);
+  void deletePolygon(uint32 polygonID);
+  size_t getVertexSize(void) const;
+  size_t getPolygonSize(void) const;
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
   typedef std::vector<GeometryLayer*> LayerList;
-  typedef std::vector<bool> ValidityMap;
   LayerList mLayers;
-  ValidityMap mValidVertices;
-  ValidityMap mValidPolygons;
+  GeometryLayer* mBaseVertexLayer;
+  GeometryLayer* mBasePolygonLayer;
 };
 
 //---------------------------------------------------------------------
@@ -772,6 +824,26 @@ private:
 class GeometryNodeObserver : public NodeObserver
 {
 public:
+  /*! Called after a new vertex is created in an observed geometry node.
+   *  @param node The geometry node in which the vertex was created.
+   *  @param vertexID The ID of the newly created vertex.
+   */
+  virtual void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
+  /*! Called before a vertex is deleted in an observed geometry node.
+   *  @param node The geometry node containing the vertex to be deleted.
+   *  @param vertexID The ID of the vertex to be deleted.
+   */
+  virtual void onDeleteVertex(GeometryNode& node, uint32 vertexID);
+  /*! Called after a new polygon is created in an observed geometry node.
+   *  @param node The geometry node in which the polygon was created.
+   *  @param polygonID The ID of the newly created polygon.
+   */
+  virtual void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
+  /*! Called before a polygon is deleted in an observed geometry node.
+   *  @param node The geometry node containing the polygon to be deleted.
+   *  @param polygonID The ID of the polygon to be deleted.
+   */
+  virtual void onDeletePolygon(GeometryNode& node, uint32 polygonID);
   /*! Called after a new geometry layer is created in an observed node.
    *  @param node The node in which the geometry layer was created.
    *  @param layer The newly created geometry buffer.
@@ -888,9 +960,9 @@ private:
   static void receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 tagID, const char* name, VNTagType type, const VNTag* value);
   static void receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 tagID);
   static void receiveNodeLanguageSet(void* user, VNodeID ID, const char* language);
-  static void receiveTextBufferCreate(void* user, VNodeID ID, uint16 bufferID, const char* name);
-  static void receiveTextBufferDestroy(void* user, VNodeID ID, VNMBufferID bufferID);
-  static void receiveTextBufferSet(void* user, VNodeID ID, VNMBufferID bufferID, uint32 position, uint32 length, const char* text);
+  static void receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name);
+  static void receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferID);
+  static void receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID, uint32 position, uint32 length, const char* text);
   static void receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerID, const char* name, VNGLayerType type, uint32 defaultInt, real64 defaultReal);
   static void receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layerID);
   static void receiveVertexSetXyzReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 x, real32 y, real32 z);
