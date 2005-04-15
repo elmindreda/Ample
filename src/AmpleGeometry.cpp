@@ -293,6 +293,15 @@ void GeometryLayer::reserve(size_t slotCount)
       switch (mType)
       {
 	case VN_G_LAYER_VERTEX_XYZ:
+	{
+	  copySlot(targetSlot->real,
+		   (real64*) NULL,
+		   getTypeElementCount(mType),
+		   V_REAL64_MAX,
+		   true);
+	  break;
+	}
+
 	case VN_G_LAYER_VERTEX_REAL:
 	case VN_G_LAYER_POLYGON_CORNER_REAL:
 	case VN_G_LAYER_POLYGON_FACE_REAL:
