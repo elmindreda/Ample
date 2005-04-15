@@ -43,8 +43,8 @@ class GeometryLayer;
 class GeometryLayerObserver;
 class GeometryNode;
 class GeometryNodeObserver;
-class ObjectMethod;
-class ObjectMethodObserver;
+class Method;
+class MethodObserver;
 class ObjectNode;
 class ObjectNodeObserver;
 class Session;
@@ -204,12 +204,22 @@ inline void Observable<T,S>::removeObserver(T& observer)
 
 //---------------------------------------------------------------------
 
+/*! Base class for versioned objects.
+ */
 class Versioned
 {
   friend class Session;
 public:
+  /*! Constructor.
+   */
   Versioned(void);
+  /*! @return The current version of the internal state.
+   *  @remarks This value is updated for any kind of change.
+   */
   unsigned int getDataVersion(void) const;
+  /*! @return The current version of the internal structure.
+   *  @remarks This value is only updated when the internal structure changes.
+   */
   unsigned int getStructureVersion(void) const;
 private:
   void updateData(void);
@@ -293,7 +303,7 @@ public:
    */
   virtual void onChange(Tag& tag);
   /*! Called before an observed tag has its name changed.
-   *  @param group The observed tag.
+   *  @param tag The observed tag.
    *  @param name The new name of the tag.
    */
   virtual void onSetName(Tag& tag, const std::string name);
@@ -612,11 +622,11 @@ public:
    *  Session::update.
    */
   void createBuffer(const std::string& name);
-  /*! @param ID The ID of the desired text buffer
+  /*! @param ID The ID of the desired text buffer.
    *  @return The text buffer with the specified ID, or @c NULL if no such text buffer exists.
    */
   TextBuffer* getBufferByID(VBufferID ID);
-  /*! @param ID The ID of the desired text buffer
+  /*! @param ID The ID of the desired text buffer.
    *  @return The text buffer with the specified ID, or @c NULL if no such text buffer exists.
    */
   const TextBuffer* getBufferByID(VBufferID ID) const;
@@ -690,7 +700,17 @@ class GeometryLayer : public Versioned, public Observable<GeometryLayerObserver,
   friend class Session;
   friend class GeometryNode;
 public:
-  enum Stack { VERTEX, POLYGON };
+  /*! Geometry stack enumeration.
+   */
+  enum Stack
+  {
+    /*! The geometry layer is a member of the vertex stack.
+     */
+    VERTEX,
+    /*! The geometry layer is a member of the polygon stack.
+     */
+    POLYGON,
+  };
   /*! Destroys this geometry layer.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
@@ -703,6 +723,8 @@ public:
   /*! @return The stack in which this layer exists.
    */
   Stack getStack(void) const;
+  /*! @return The quality of real value geometry layers.
+   */
   VNRealFormat getRealFormat(void) const;
   /*! @return The name of this geometry layer.
    */
@@ -788,25 +810,96 @@ class GeometryNode : public Node
 {
   friend class Session;
 public:
+  /*! Creates a geometry layer in this node.
+   *  @param name The desired name of the geometry layer.
+   *  @param type The desired slot type of the geometry layer.
+   *  @param defaultInt The desired default value for integer slots.
+   *  @param defaultReal The desired default value for real slots.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void createLayer(const std::string& name,
                    VNGLayerType type,
 		   uint32 defaultInt = 0,
 		   real64 defaultReal = 0.0);
+  /*! @param ID The ID of the desired geometry layer.
+   *  @return The geometry layer with the specified ID, or @c NULL if no such geometry layer exists.
+   */
   GeometryLayer* getLayerByID(VLayerID ID);
+  /*! @param ID The ID of the desired geometry layer.
+   *  @return The geometry layer with the specified ID, or @c NULL if no such geometry layer exists.
+   */
   const GeometryLayer* getLayerByID(VLayerID ID) const;
+  /*! @param index The index of the desired geometry layer.
+   *  @return The geometry layer at the specified index, or @c NULL if no such geometry layer exists.
+   */
   GeometryLayer* getLayerByIndex(unsigned int index);
+  /*! @param index The index of the desired geometry layer.
+   *  @return The geometry layer at the specified index, or @c NULL if no such geometry layer exists.
+   */
   const GeometryLayer* getLayerByIndex(unsigned int index) const;
+  /*! @param name The name of the desired geometry layer
+   *  @return The geometry layer with the specified name, or @c NULL if no such geometry layer exists.
+   */
   GeometryLayer* getLayerByName(const std::string& name);
+  /*! @param name The name of the desired geometry layer
+   *  @return The geometry layer with the specified name, or @c NULL if no such geometry layer exists.
+   */
   const GeometryLayer* getLayerByName(const std::string& name) const;
+  /*! @return @c true if the vertex with the specified ID is valid.
+   */
   bool isVertex(uint32 vertexID) const;
+  /*! @return @c true if the polygon with the specified ID is valid.
+   */
   bool isPolygon(uint32 polygonID) const;
+  /*! Retrieves the base layer data of the specified vertex.
+   *  @param vertexID The ID of the desired vertex.
+   *  @param vertex The base layer data of the desired vertex.
+   *  @return @c true if the vertex was valid, otherwise @c false.
+   */
   bool getBaseVertex(uint32 vertexID, BaseVertex& vertex) const;
+  /*! Retrieves the base layer data of the specified polygon.
+   *  @param polygonID The ID of the desired polygon.
+   *  @param polygon The base layer data of the desired vertex.
+   *  @return @c true if the polygon was valid, otherwise @c false.
+   */
   bool getBasePolygon(uint32 polygonID, BasePolygon& polygon) const;
+  /*! Sets the base layer data for the specified vertex.
+   *  @param vertexID The ID of the vertex to create or change.
+   *  @param vertex The data for the base vertex layer.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setBaseVertex(uint32 vertexID, const BaseVertex& vertex);
+  /*! Sets the base layer data for the specified polygon.
+   *  @param polygonID The ID of the polygon to create or change.
+   *  @param polygon The data for the base polygon layer.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setBasePolygon(uint32 polygonID, const BasePolygon& polygon);
+  /*! Deletes the vertex with the specified ID.
+   *  @param vertexID The ID of the vertex to delete.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void deleteVertex(uint32 vertexID);
+  /*! Deletes the polygon with the specified ID.
+   *  @param polygonID The ID of the polygon to delete.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void deletePolygon(uint32 polygonID);
+  /*! @return The size, in bytes, of all the geometry layer slots that make up a single vertex.
+   */
   size_t getVertexSize(void) const;
+  /*! @return The size, in bytes, of all the geometry layer slots that make up a single polygon.
+   */
   size_t getPolygonSize(void) const;
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
@@ -827,6 +920,7 @@ public:
   /*! Called after a new vertex is created in an observed geometry node.
    *  @param node The geometry node in which the vertex was created.
    *  @param vertexID The ID of the newly created vertex.
+   *  @param vertex The base layer data for the newly created vertex.
    */
   virtual void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
   /*! Called before a vertex is deleted in an observed geometry node.
@@ -837,6 +931,7 @@ public:
   /*! Called after a new polygon is created in an observed geometry node.
    *  @param node The geometry node in which the polygon was created.
    *  @param polygonID The ID of the newly created polygon.
+   *  @param polygon The base layer data for the newly created polygon.
    */
   virtual void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
   /*! Called before a polygon is deleted in an observed geometry node.
@@ -858,10 +953,21 @@ public:
 
 //---------------------------------------------------------------------
 
-class ObjectMethod : public Observable<ObjectMethodObserver, ObjectMethod>
+/*! Object method. Represents a single method in an object node.
+ */
+class Method : public Observable<MethodObserver, Method>
 {
   friend class Session;
+  friend class MethodGroup;
 public:
+  /*! Issues a call to this method.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
+  void call(/*parameters*/);
+  /*! @return The name of this object method.
+   */
   const std::string& getName(void) const;
 private:
   std::string mName;
@@ -869,58 +975,231 @@ private:
 
 //---------------------------------------------------------------------
 
-class ObjectMethodObserver : public Observer<ObjectMethodObserver, ObjectMethod>
+/*! Observer interface for object node methods.
+ */
+class MethodObserver : public Observer<MethodObserver, Method>
 {
-  friend class Session;
 public:
+  /*! Called when a call has been issued to an observed object method.
+   */
+  virtual void onCall(/*parameters*/);  
 };
 
 //---------------------------------------------------------------------
 
+/*! Method group class. Represents a single method group in an object node.
+ */
+class MethodGroup : public Observable<MethodGroupObserver, MethodGroup>
+{
+  friend class Session;
+  friend class ObjectNode;
+public:
+  /*! @return The name of this method group.
+   */
+  const std::string& getName(void) const;
+private:
+  std::string mName;
+};
+
+//---------------------------------------------------------------------
+
+/*! Observer interface for object node methods.
+ */
+class MethodGroupObserver : public Observer<MethodGroupObserver, MethodGroup>
+{
+public:
+  /*! Called after a new method is created in an observed method group.
+   *  @param group The observed method group.
+   *  @param method The newly created object method.
+   */
+  virtual void onCreateMethod(MethodGroup& group, Method& method);
+  /*! Called beforfe a method is created in an observed method group.
+   *  @param group The observed method group.
+   *  @param method The object method to be destroyed.
+   */
+  virtual void onDestroyMethod(MethodGroup& group, Method& method);
+};
+
+//---------------------------------------------------------------------
+
+/*! Object node class. Represents a single object node.
+ */
 class ObjectNode : public Node, public Observable<ObjectNodeObserver, ObjectNode>
 {
   friend class Session;
 public:
+  /*! Creates a new method group in this node.
+   *  @param name The desired name of the method group.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
+  void createMethodGroup(const std::string& name);
+  /*! @param groupID The ID of the desired method group.
+   *  @return The method group with the specified ID, or @c NULL if no such method group exists.
+   */
+  MethodGroup* getMethodGroupByID(uint16 groupID);
+  /*! @param groupID The ID of the desired method group.
+   *  @return The method group with the specified ID, or @c NULL if no such method group exists.
+   */
+  const MethodGroup* getMethodGroupByID(uint16 groupID) const;
+  /*! @param index The index of the desired method group.
+   *  @return The method group at the specified index, or @c NULL if no such method group exists.
+   */
+  MethodGroup* getMethodGroupByIndex(unsigned int index);
+  /*! @param index The index of the desired method group.
+   *  @return The method group at the specified index, or @c NULL if no such method group exists.
+   */
+  const MethodGroup* getMethodGroupByIndex(unsigned int index) const;
+  /*! @param name The name of the desired method group
+   *  @return The method group with the specified name, or @c NULL if no such method group exists.
+   */
+  MethodGroup* getMethodGroupByName(const std::string& name);
+  /*! @param name The name of the desired method group
+   *  @return The method group with the specified name, or @c NULL if no such method group exists.
+   */
+  const MethodGroup* getMethodGroupByName(const std::string& name) const;
+  /*! @return The number of method groups in this node.
+   */
+  unsigned int getMethodGroupCount(void) const;
 private:
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  ~ObjectNode(void);
+  typedef std::vector<MethodGroup*> MethodGroupList;
+  MethodGroupList mGroups;
 };
 
 //---------------------------------------------------------------------
 
+/*! Observer interface for object nodes.
+ */
 class ObjectNodeObserver : public NodeObserver
 {
-  friend class Session;
 public:
+  /*! Called after a new method group is created in an observed object node.
+   *  @param node The observed object node.
+   *  @param group The newly created method group.
+   */
+  virtual void onCreateMethodGroup(ObjectNode& node, MethodGroup& group);
+  /*! Called before a method group is destroyed in an observed object node.
+   *  @param node The observed object node.
+   *  @param group The method group to be destroyed.
+   */
+  virtual void onDestroyMethodGroup(ObjectNode& node, MethodGroup& group);
 };
 
 //---------------------------------------------------------------------
 
+/*! Session class. Represents a single session with a verse server.
+ */
 class Session : public Versioned, public Observable<SessionObserver, Session>
 {
 public:
-  enum State { CONNECTING, CONNECTED, TERMINATED };
+  /*! Session state enumeration.
+   */
+  enum State
+  {
+    /*! The session is still being created.
+     */
+    CONNECTING,
+    /*! The session is established and exchanging data.
+     */
+    CONNECTED,
+    /*! The session is terminated. The object will remain for inspection
+     *  until a new session is created with the same server.
+     */
+    TERMINATED
+  };
+  /*! Pushes this session onto the internal stack and makes it the active session.
+   */
   void push(void);
+  /*! Pops this session from the internal stack and activates the previous one.
+   */
   void pop(void);
+  /*! Terminates this session with the specified message.
+   *  @param byebye The desired termination message.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void terminate(const std::string& byebye);
+  /*! Creates a node with the specified name and of the specified type.
+   *  @param name The desired name of the node.
+   *  @param type The desired type of the node.
+   *  @remarks Due to the structure of the verse protocol, the created
+   *  node will not immediately receive the specified name.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void createNode(const std::string& name, VNodeType type);
+  /*! @return The state of this session.
+   */
   State getState(void) const;
+  /*! @param ID The ID of the desired node.
+   *  @return The node with the specified ID, or @c NULL if no such node exists.
+   */
   Node* getNodeByID(VNodeID ID);
+  /*! @param ID The ID of the desired node.
+   *  @return The node with the specified ID, or @c NULL if no such node exists.
+   */
   const Node* getNodeByID(VNodeID ID) const;
+  /*! @param index The index of the desired node.
+   *  @return The node at the specified index, or @c NULL if no such node exists.
+   */
   Node* getNodeByIndex(unsigned int index);
+  /*! @param index The index of the desired node.
+   *  @return The node at the specified index, or @c NULL if no such node exists.
+   */
   const Node* getNodeByIndex(unsigned int index) const;
+  /*! @param name The name of the desired node
+   *  @return The node with the specified name, or @c NULL if no such node exists.
+   */
   Node* getNodeByName(const std::string& name);
+  /*! @param name The name of the desired node
+   *  @return The node with the specified name, or @c NULL if no such node exists.
+   */
   const Node* getNodeByName(const std::string& name) const;
+  /*! @return The number of nodes visible in this session.
+   */
   unsigned int getNodeCount(void) const;
+  /*! @return The avatar node for this session.
+   */
   Node* getAvatarNode(void);
+  /*! @return The avatar node for this session.
+   */
   const Node* getAvatarNode(void) const;
+  /*! @return The address of the verse server for this session.
+   */
   const std::string& getAddress(void) const;
+  /*! Creates a session with the specified verse server.
+   *  @param address The address of the desired verse server.
+   *  @param username The desired user name for the session.
+   *  @param password The password for the specified user.
+   *  @param typeMask A bitmask for the desired node types.
+   */
   static Session* create(const std::string& address,
 			 const std::string& username,
 			 const std::string& password,
 			 unsigned int typeMask = 0);
+  /*! Searches for a session with the specified server address.
+   *  @param address The server address to search for.
+   *  @return The session with the specified address, or @c NULL.
+   */
   static Session* find(const std::string& address);
+  /*! Updates all session and associated data.
+   *  This call will cause all the commands issued and received since
+   *  the last update to take effect, including triggering observers.
+   *  @param microseconds The maximum number of microseconds to block,
+   *  when waiting for new command.
+   */
   static void update(uint32 microseconds);
+  /*! Terminates all connected sessions with the specified message.
+   *  @param byebye The desired termination message.
+   */
   static void terminateAll(const std::string& byebye);
+  /*! @return The active session, or @c NULL if no session is active.
+   */
   static Session* getCurrent(void);
 private:
   Session(const std::string& address,
