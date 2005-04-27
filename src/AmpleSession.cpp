@@ -814,7 +814,7 @@ void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID lay
   for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onSetSlot(*layer, vertexID, &vertex);
 
-  bool created = (layerID == 0 && node->isVertex(vertexID));
+  bool created = (layerID == 0 && !node->isVertex(vertexID));
 
   layer->reserve(vertexID + 1);
 

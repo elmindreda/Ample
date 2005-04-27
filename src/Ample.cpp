@@ -12,6 +12,7 @@ namespace verse
 
 BaseVertex::BaseVertex(void)
 {
+  setInvalid();
 }
 
 BaseVertex::BaseVertex(real64 sx, real64 sy, real64 sz):
@@ -23,7 +24,7 @@ BaseVertex::BaseVertex(real64 sx, real64 sy, real64 sz):
 
 bool BaseVertex::isValid(void) const
 {
-  return x != V_REAL64_MAX || y != V_REAL64_MAX || z != V_REAL64_MAX;
+  return x != V_REAL64_MAX && y != V_REAL64_MAX && z != V_REAL64_MAX;
 }
 
 void BaseVertex::set(real64 sx, real64 sy, real64 sz)
@@ -44,6 +45,7 @@ void BaseVertex::setInvalid(void)
 
 BasePolygon::BasePolygon(void)
 {
+  setInvalid();
 }
 
 BasePolygon::BasePolygon(uint32 v0, uint32 v1, uint32 v2, uint32 v3)
@@ -107,10 +109,7 @@ void Block::resize(size_t count)
     {
       uint8* data = new uint8 [count * mItemSize];
 
-      if (count > mItemCount)
-	count = mItemCount;
-
-      std::memcpy(data, mData, count * mItemSize);
+      std::memcpy(data, mData, std::min(count, mItemCount) * mItemSize);
 
       delete [] mData;
       mData = data;
@@ -155,9 +154,13 @@ Block& Block::operator = (const Block& source)
   mItemSize = source.mItemSize;
 
   release();
-  resize(source.mItemCount);
 
-  std::memcpy(mData, source.mData, mItemCount * mItemSize);
+  if (source.mItemCount)
+  {
+    resize(source.mItemCount);
+    std::memcpy(mData, source.mData, mItemCount * mItemSize);
+  }
+
   return *this;
 }
 

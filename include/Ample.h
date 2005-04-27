@@ -3,6 +3,7 @@
 #include <vector>
 #include <stack>
 #include <list>
+#include <map>
 
 #include <AmpleUtil.h>
 
@@ -33,20 +34,27 @@ class Tag;
 class TagObserver;
 class TagGroup;
 class TagGroupObserver;
+
 class Node;
 class NodeObserver;
+
 class TextBuffer;
 class TextBufferObserver;
 class TextNode;
 class TextNodeObserver;
+
 class GeometryLayer;
 class GeometryLayerObserver;
 class GeometryNode;
 class GeometryNodeObserver;
+
 class Method;
 class MethodObserver;
+class MethodGroup;
+class MethodGroupObserver;
 class ObjectNode;
 class ObjectNodeObserver;
+
 class Session;
 class SessionObserver;
 
@@ -823,6 +831,7 @@ public:
                    VNGLayerType type,
 		   uint32 defaultInt = 0,
 		   real64 defaultReal = 0.0);
+  void getBaseMesh(BaseMesh& mesh);
   /*! @param ID The ID of the desired geometry layer.
    *  @return The geometry layer with the specified ID, or @c NULL if no such geometry layer exists.
    */
@@ -905,6 +914,7 @@ private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
   typedef std::vector<GeometryLayer*> LayerList;
+  typedef std::map<uint32,uint32> VertexIndexMap;
   LayerList mLayers;
   GeometryLayer* mBaseVertexLayer;
   GeometryLayer* mBasePolygonLayer;

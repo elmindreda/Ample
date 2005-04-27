@@ -297,7 +297,7 @@ void GeometryLayer::reserve(size_t slotCount)
 	  copySlot(targetSlot->real,
 		   (real64*) NULL,
 		   getTypeElementCount(mType),
-		   V_REAL64_MAX,
+		   (getID() == 0 ? V_REAL64_MAX : mDefaultReal),
 		   true);
 	  break;
 	}
@@ -400,6 +400,66 @@ void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint3
   getSession().pop();
 }
 
+void GeometryNode::getBaseMesh(BaseMesh& mesh)
+{
+  if (!mBaseVertexLayer || !mBasePolygonLayer)
+  {
+    printf("No layers\n");
+    return;
+  }
+
+  // retrieve all valid polygons
+
+  for (uint32 i = 0;  i < mBasePolygonLayer->mData.getItemCount();  i++)
+  {
+    BasePolygon polygon;
+
+    if (getBasePolygon(i, polygon))
+    {
+      if (!isVertex(polygon.mIndices[3]))
+	polygon.mIndices[3] = INVALID_VERTEX_ID;
+      mesh.mPolygons.push_back(polygon);
+    }
+  }
+
+  if (!mesh.mPolygons.size())
+  {
+    printf("No pollies\n");
+    return;
+  }
+
+  // remap vertex indices
+
+  VertexIndexMap indices;
+
+  for (BaseMesh::PolygonList::iterator polygon = mesh.mPolygons.begin();  polygon != mesh.mPolygons.end();  polygon++)
+  {
+    for (unsigned int i = 0;  i < 4;  i++)
+    {
+      uint32 index = (*polygon).mIndices[i];
+      if (index == INVALID_VERTEX_ID)
+	break;
+
+      VertexIndexMap::iterator mapper = indices.find(index);
+      if (mapper == indices.end())
+      {
+	const uint32 value = indices.size();
+	indices[index] = value;
+	mapper = indices.find(index);
+      }
+
+      (*polygon).mIndices[i] = (*mapper).second;
+    }
+  }
+
+  // copy vertices into new indices
+
+  mesh.mVertices.resize(indices.size());
+  
+  for (VertexIndexMap::const_iterator i = indices.begin();  i != indices.end();  i++)
+    getBaseVertex((*i).first, mesh.mVertices[(*i).second]);
+}
+
 GeometryLayer* GeometryNode::getLayerByID(VLayerID ID)
 {
   for (LayerList::iterator i = mLayers.begin();  i != mLayers.end();  i++)
@@ -452,10 +512,7 @@ bool GeometryNode::isVertex(uint32 vertexID) const
     return false;
 
   const BaseVertex* vertex = reinterpret_cast<BaseVertex*>(mBaseVertexLayer->mData.getItem(vertexID));
-  if (!vertex)
-    return false;
-
-  if (vertex->x == V_REAL64_MAX && vertex->y == V_REAL64_MAX && vertex->z == V_REAL64_MAX)
+  if (!vertex || !vertex->isValid())
     return false;
 
   return true;
@@ -485,10 +542,7 @@ bool GeometryNode::getBaseVertex(uint32 vertexID, BaseVertex& vertex) const
     return false;
 
   const BaseVertex* result = reinterpret_cast<BaseVertex*>(mBaseVertexLayer->mData.getItem(vertexID));
-  if (!result)
-    return false;
-
-  if (result->x == V_REAL64_MAX && result->y == V_REAL64_MAX && result->z == V_REAL64_MAX)
+  if (!result || !result->isValid())
     return false;
 
   vertex = *result;
