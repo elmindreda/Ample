@@ -463,7 +463,7 @@ void Session::receiveNodeNameSet(void* user, VNodeID ID, const char* name)
   if (!node)
     return;
   
-  const Node::ObserverList observers = node->mObservers;
+  const Node::ObserverList& observers = node->mObservers;
   for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onSetName(*node, name);
   
@@ -510,7 +510,7 @@ void Session::receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID)
   if (!node)
     return;
 
-  Node::TagGroupList groups = node->mGroups;
+  Node::TagGroupList& groups = node->mGroups;
   for (Node::TagGroupList::iterator group = groups.begin();  group != groups.end();  group++)
   {
     if ((*group)->getID() == groupID)
@@ -542,12 +542,22 @@ void Session::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 ta
 
   if (Tag* tag = group->getTagByID(tagID))
   {
+    if (tag->mName != name)
+    {
+      // TODO: Notify name change.
+    }
+
+    if (tag->mType != type)
+    {
+      // TODO: Notify type change.
+    }
+
+    // TODO: Compare values.
+
     const Tag::ObserverList& observers = tag->mObservers;
     for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       (*i)->onChange(*tag);
     
-    // TODO: Insert AI.
-
     tag->mName = name;
     tag->mType = type;
     tag->mValue = *value;
@@ -656,7 +666,7 @@ void Session::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferI
   if (!node)
     return;
 
-  TextNode::BufferList buffers = node->mBuffers;
+  TextNode::BufferList& buffers = node->mBuffers;
   for (TextNode::BufferList::iterator buffer = buffers.begin();  buffer != buffers.end();  buffer++)
   {
     if ((*buffer)->getID() == bufferID)
