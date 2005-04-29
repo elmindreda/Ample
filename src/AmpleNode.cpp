@@ -117,8 +117,11 @@ Node::Node(VNodeID ID, VNodeType type, VNodeOwner owner, Session& session):
 
 Node::~Node(void)
 {
-  for (TagGroupList::iterator i = mGroups.begin();  i != mGroups.end();  i++)
-    delete *i;
+  while (mGroups.size())
+  {
+    delete mGroups.back();
+    mGroups.pop_back();
+  }
 }
 
 //---------------------------------------------------------------------

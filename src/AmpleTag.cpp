@@ -198,8 +198,11 @@ TagGroup::TagGroup(uint16 ID, const std::string& name, Node& node):
 
 TagGroup::~TagGroup(void)
 {
-  for (TagList::iterator i = mTags.begin();  i != mTags.end(); i++)
-    delete *i;
+  while (mTags.size())
+  {
+    delete mTags.back();
+    mTags.pop_back();
+  }
 }
 
 //---------------------------------------------------------------------
