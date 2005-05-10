@@ -1035,7 +1035,7 @@ public:
 
 /*! Object node class. Represents a single object node.
  */
-class ObjectNode : public Node, public Observable<ObjectNodeObserver, ObjectNode>
+class ObjectNode : public Node
 {
   friend class Session;
 public:
