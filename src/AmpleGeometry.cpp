@@ -258,7 +258,7 @@ GeometryLayer::GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType 
   mDefaultReal(defaultReal)
 {
   mData.setItemSize(getTypeSize(mType));
-  mData.setGranularity(1024);
+  mData.setGranularity(10);
 
   switch (mType)
   {
@@ -280,61 +280,61 @@ GeometryLayer::GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType 
 
 void GeometryLayer::reserve(size_t slotCount)
 {
-  if (slotCount > mData.getItemCount())
+  if (slotCount <= mData.getItemCount())
+    return;
+
+  size_t baseCount = mData.getItemCount();
+
+  mData.reserve(slotCount);
+
+  for (unsigned int i = baseCount;  i < slotCount;  i++)
   {
-    size_t baseCount = mData.getItemCount();
+    Slot* targetSlot = reinterpret_cast<Slot*>(mData.getItem(i));
 
-    mData.reserve(slotCount);
-
-    for (unsigned int i = baseCount;  i < slotCount;  i++)
+    switch (mType)
     {
-      Slot* targetSlot = reinterpret_cast<Slot*>(mData.getItem(i));
-
-      switch (mType)
+      case VN_G_LAYER_VERTEX_XYZ:
       {
-	case VN_G_LAYER_VERTEX_XYZ:
-	{
-	  copySlot(targetSlot->real,
-		   (real64*) NULL,
-		   getTypeElementCount(mType),
-		   (getID() == 0 ? V_REAL64_MAX : mDefaultReal),
-		   true);
-	  break;
-	}
+	copySlot(targetSlot->real,
+		 (real64*) NULL,
+		 getTypeElementCount(mType),
+		 ((getID() == 0) ? V_REAL64_MAX : mDefaultReal),
+		 true);
+	break;
+      }
 
-	case VN_G_LAYER_VERTEX_REAL:
-	case VN_G_LAYER_POLYGON_CORNER_REAL:
-	case VN_G_LAYER_POLYGON_FACE_REAL:
-	{
-	  copySlot(targetSlot->real,
-		   (real64*) NULL,
-		   getTypeElementCount(mType),
-		   mDefaultReal,
-		   true);
-	  break;
-	}
+      case VN_G_LAYER_VERTEX_REAL:
+      case VN_G_LAYER_POLYGON_CORNER_REAL:
+      case VN_G_LAYER_POLYGON_FACE_REAL:
+      {
+	copySlot(targetSlot->real,
+		 (real64*) NULL,
+		 getTypeElementCount(mType),
+		 mDefaultReal,
+		 true);
+	break;
+      }
 
-	case VN_G_LAYER_VERTEX_UINT32:
-	case VN_G_LAYER_POLYGON_CORNER_UINT32:
-	case VN_G_LAYER_POLYGON_FACE_UINT32:
-	{
-	  copySlot(targetSlot->uint,
-		   (uint32*) NULL,
-		   getTypeElementCount(mType),
-		   mDefaultInt,
-		   true);
-	  break;
-	}
-	
-	case VN_G_LAYER_POLYGON_FACE_UINT8:
-	{
-	  copySlot(targetSlot->byte,
-		   (uint8*) NULL,
-		   getTypeElementCount(mType),
-		   (uint8) mDefaultInt,
-		   true);
-	  break;
-	}
+      case VN_G_LAYER_VERTEX_UINT32:
+      case VN_G_LAYER_POLYGON_CORNER_UINT32:
+      case VN_G_LAYER_POLYGON_FACE_UINT32:
+      {
+	copySlot(targetSlot->uint,
+		 (uint32*) NULL,
+		 getTypeElementCount(mType),
+		 ((getID() == 1) ? INVALID_VERTEX_ID : mDefaultInt),
+		 true);
+	break;
+      }
+      
+      case VN_G_LAYER_POLYGON_FACE_UINT8:
+      {
+	copySlot(targetSlot->byte,
+		 (uint8*) NULL,
+		 getTypeElementCount(mType),
+		 (uint8) mDefaultInt,
+		 true);
+	break;
       }
     }
   }
@@ -400,12 +400,12 @@ void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint3
   getSession().pop();
 }
 
-void GeometryNode::getBaseMesh(BaseMesh& mesh)
+bool GeometryNode::getBaseMesh(BaseMesh& mesh)
 {
   if (!mBaseVertexLayer || !mBasePolygonLayer)
   {
     printf("No layers\n");
-    return;
+    return false;
   }
 
   // retrieve all valid polygons
@@ -425,7 +425,7 @@ void GeometryNode::getBaseMesh(BaseMesh& mesh)
   if (!mesh.mPolygons.size())
   {
     printf("No pollies\n");
-    return;
+    return false;
   }
 
   // remap vertex indices
@@ -458,6 +458,8 @@ void GeometryNode::getBaseMesh(BaseMesh& mesh)
   
   for (VertexIndexMap::const_iterator i = indices.begin();  i != indices.end();  i++)
     getBaseVertex((*i).first, mesh.mVertices[(*i).second]);
+
+  return true;
 }
 
 GeometryLayer* GeometryNode::getLayerByID(VLayerID ID)
