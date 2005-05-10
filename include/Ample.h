@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <stack>
@@ -831,7 +832,7 @@ public:
                    VNGLayerType type,
 		   uint32 defaultInt = 0,
 		   real64 defaultReal = 0.0);
-  void getBaseMesh(BaseMesh& mesh);
+  bool getBaseMesh(BaseMesh& mesh);
   /*! @param ID The ID of the desired geometry layer.
    *  @return The geometry layer with the specified ID, or @c NULL if no such geometry layer exists.
    */
@@ -987,7 +988,7 @@ private:
 
 /*! Observer interface for object node methods.
  */
-class MethodObserver : public Observer<MethodObserver, Method>
+class MethodObserver : public Observer<Method, MethodObserver>
 {
 public:
   /*! Called when a call has been issued to an observed object method.
