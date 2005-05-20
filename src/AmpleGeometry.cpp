@@ -75,7 +75,7 @@ const std::string& GeometryLayer::getName(void) const
 
 unsigned int GeometryLayer::getSlotSize(void) const
 {
-  return getTypeSize(mType);
+  return mData.getItemSize();
 }
 
 VNGLayerType GeometryLayer::getType(void) const
@@ -258,7 +258,7 @@ GeometryLayer::GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType 
   mDefaultReal(defaultReal)
 {
   mData.setItemSize(getTypeSize(mType));
-  mData.setGranularity(10);
+  mData.setGranularity(1024);
 
   switch (mType)
   {
@@ -287,7 +287,7 @@ void GeometryLayer::reserve(size_t slotCount)
 
   mData.reserve(slotCount);
 
-  for (unsigned int i = baseCount;  i < slotCount;  i++)
+  for (unsigned int i = baseCount;  i < mData.getItemCount();  i++)
   {
     Slot* targetSlot = reinterpret_cast<Slot*>(mData.getItem(i));
 
@@ -403,12 +403,9 @@ void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint3
 bool GeometryNode::getBaseMesh(BaseMesh& mesh)
 {
   if (!mBaseVertexLayer || !mBasePolygonLayer)
-  {
-    printf("No layers\n");
     return false;
-  }
 
-  // retrieve all valid polygons
+  // Retrieve all valid polygons.
 
   for (uint32 i = 0;  i < mBasePolygonLayer->mData.getItemCount();  i++)
   {
@@ -423,12 +420,9 @@ bool GeometryNode::getBaseMesh(BaseMesh& mesh)
   }
 
   if (!mesh.mPolygons.size())
-  {
-    printf("No pollies\n");
     return false;
-  }
 
-  // remap vertex indices
+  // Remap vertex indices.
 
   VertexIndexMap indices;
 
@@ -452,7 +446,7 @@ bool GeometryNode::getBaseMesh(BaseMesh& mesh)
     }
   }
 
-  // copy vertices into new indices
+  // Copy vertices into new indices.
 
   mesh.mVertices.resize(indices.size());
   
@@ -657,11 +651,19 @@ void GeometryNodeObserver::onCreateVertex(GeometryNode& node, uint32 vertexID, c
 {
 }
 
+void GeometryNodeObserver::onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
+{
+}
+
 void GeometryNodeObserver::onDeleteVertex(GeometryNode& node, uint32 vertexID)
 {
 }
   
 void GeometryNodeObserver::onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+{
+}
+
+void GeometryNodeObserver::onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
 {
 }
 
