@@ -479,7 +479,8 @@ void Session::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, cons
   if (!node)
     return;
 
-  if (TagGroup* group = node->getTagGroupByID(groupID))
+  TagGroup* group = node->getTagGroupByID(groupID);
+  if (group)
   {
     const TagGroup::ObserverList& observers = group->mObservers;
     for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -490,7 +491,7 @@ void Session::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, cons
   }
   else
   {
-    TagGroup* group = new TagGroup(groupID, name, *node);
+    group = new TagGroup(groupID, name, *node);
     node->mGroups.push_back(group);
     node->updateStructure();
     
@@ -540,7 +541,8 @@ void Session::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 ta
   if (!group)
     return;
 
-  if (Tag* tag = group->getTagByID(tagID))
+  Tag* tag = group->getTagByID(tagID);
+  if (tag)
   {
     if (tag->mName != name)
     {
@@ -565,7 +567,7 @@ void Session::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 ta
   }
   else
   {
-    Tag* tag = new Tag(tagID, name, type, *value, *group);
+    tag = new Tag(tagID, name, type, *value, *group);
     group->mTags.push_back(tag);
     group->updateStructure();
 
@@ -632,7 +634,8 @@ void Session::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID
   if (!node)
     return;
 
-  if (TextBuffer* buffer = node->getBufferByID(bufferID))
+  TextBuffer* buffer = node->getBufferByID(bufferID);
+  if (buffer)
   {
     const TextBuffer::ObserverList& observers = buffer->mObservers;
     for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -643,7 +646,7 @@ void Session::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID
   }
   else
   {
-    TextBuffer* buffer = new TextBuffer(bufferID, name, *node);
+    buffer = new TextBuffer(bufferID, name, *node);
     node->mBuffers.push_back(buffer);
     node->updateStructure();
 
@@ -717,7 +720,8 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
 
   // TODO: Refactor the lot.
 
-  if (GeometryLayer* layer = node->getLayerByID(layerID))
+  GeometryLayer* layer = node->getLayerByID(layerID);
+  if (layer)
   {
     if (layer->getType() == type)
     {
@@ -749,7 +753,7 @@ void Session::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerI
   {
     // No previous local layer object existed, so this is a create command.
 
-    GeometryLayer* layer = new GeometryLayer(layerID, name, type, *node, defaultInt, defaultReal);
+    layer = new GeometryLayer(layerID, name, type, *node, defaultInt, defaultReal);
     node->mLayers.push_back(layer);
     node->updateStructure();
 
