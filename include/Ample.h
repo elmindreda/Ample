@@ -24,9 +24,9 @@ class BaseVertex;
 class BasePolygon;
 class BaseMesh;
 
-template <typename T, typename S>
+template <typename T>
 class Observer;
-template <typename T, typename S>
+template <typename T>
 class Observable;
 
 class Versioned;
@@ -130,15 +130,16 @@ private:
 
 /*! Base class for observer interfaces.
  */
-template <typename T, typename S>
+template <typename T>
 class Observer
 {
 public:
-  typedef Observable<S,T> ObservableType;
+  typedef Observable<T> ObservableType;
   friend class ObservableType;
   /*! Destructor. Detaches the observer from all observed objects.
    */
   inline virtual ~Observer(void);
+  inline void detachObservables(void);
 private:
   typedef std::vector<ObservableType*> ObservableList;
   ObservableList mObservables;
@@ -146,23 +147,29 @@ private:
 
 //---------------------------------------------------------------------
 
-template <typename T, typename S>
-inline Observer<T,S>::~Observer(void)
+template <typename T>
+inline Observer<T>::~Observer(void)
+{
+  detachObservables();
+}
+
+template <typename T>
+inline void Observer<T>::detachObservables(void)
 {
   while (mObservables.size())
-    mObservables.front()->removeObserver(dynamic_cast<S&>(*this));
+    mObservables.front()->removeObserver(dynamic_cast<T&>(*this));
 }
 
 //---------------------------------------------------------------------
 
 /*! Base class for all observable objects.
  */
-template <typename T, typename S>
+template <typename T>
 class Observable
 {
   friend class Session;
 public:
-  typedef Observer<S,T> ObserverType;
+  typedef Observer<T> ObserverType;
   /*! Destructor. Detaches all attached observers.
    */
   inline virtual ~Observable(void);
@@ -182,15 +189,15 @@ private:
 
 //---------------------------------------------------------------------
 
-template <typename T, typename S>
-inline Observable<T,S>::~Observable(void)
+template <typename T>
+inline Observable<T>::~Observable(void)
 {
   while (mObservers.size())
     removeObserver(*mObservers.front());
 }
 
-template <typename T, typename S>
-inline void Observable<T,S>::addObserver(T& observer)
+template <typename T>
+inline void Observable<T>::addObserver(T& observer)
 {
   if (std::find(mObservers.begin(), mObservers.end(), &observer) != mObservers.end())
     return;
@@ -199,8 +206,8 @@ inline void Observable<T,S>::addObserver(T& observer)
   static_cast<ObserverType&>(observer).mObservables.push_back(this);
 }
 
-template <typename T, typename S>
-inline void Observable<T,S>::removeObserver(T& observer)
+template <typename T>
+inline void Observable<T>::removeObserver(T& observer)
 {
   typename ObserverList::iterator i = std::find(mObservers.begin(), mObservers.end(), &observer);
   if (i != mObservers.end())
@@ -241,7 +248,7 @@ private:
 
 /*! Node tag class. Represents a single tag in a node's tag group.
  */
-class Tag : public Versioned, public Observable<TagObserver, Tag>
+class Tag : public Versioned, public Observable<TagObserver>
 {
   friend class Session;
   friend class TagGroup;
@@ -303,7 +310,7 @@ private:
 
 /*! Observer interface for tags.
  */
-class TagObserver : public Observer<Tag, TagObserver>
+class TagObserver : public Observer<TagObserver>
 {
 public:
   //! @todo Change.
@@ -322,7 +329,7 @@ public:
 
 /*! Node tag group class. Represents a single tag group in a node.
  */
-class TagGroup : public Versioned, public Observable<TagGroupObserver, TagGroup>
+class TagGroup : public Versioned, public Observable<TagGroupObserver>
 {
   friend class Session;
   friend class Node;
@@ -399,7 +406,7 @@ private:
 
 /*! Observer interface for tag groups.
  */
-class TagGroupObserver : public Observer<TagGroup, TagGroupObserver>
+class TagGroupObserver : public Observer<TagGroupObserver>
 {
 public:
   /*! Called after a new tag is created in an observed tag group.
@@ -423,7 +430,7 @@ public:
 
 /*! Node base class. Represents a single node of unknown type.
  */
-class Node : public Versioned, public Observable<NodeObserver, Node>
+class Node : public Versioned, public Observable<NodeObserver>
 {
   friend class Session;
 public:
@@ -515,7 +522,7 @@ private:
 
 /*! Observer interface for nodes.
  */
-class NodeObserver : public Observer<Node, NodeObserver>
+class NodeObserver : public Observer<NodeObserver>
 {
 public:
   /*! Called after a new tag group is created in an observed node.
@@ -539,7 +546,7 @@ public:
 
 /*! Text node buffer class. Represents a single buffer in a text node.
  */
-class TextBuffer : public Versioned, public Observable<TextBufferObserver, TextBuffer>
+class TextBuffer : public Versioned, public Observable<TextBufferObserver>
 {
   friend class Session;
   friend class TextNode;
@@ -599,7 +606,7 @@ private:
 
 /*! Observer interface for text node buffers.
  */
-class TextBufferObserver : public Observer<TextBuffer, TextBufferObserver>
+class TextBufferObserver : public Observer<TextBufferObserver>
 {
 public:
   /*! Called before a portion (range) of an observed text buffer is modified.
@@ -704,7 +711,7 @@ public:
 
 /*! Geometry node layer class. Represents a single layer in a geometry node.
  */
-class GeometryLayer : public Versioned, public Observable<GeometryLayerObserver, GeometryLayer>
+class GeometryLayer : public Versioned, public Observable<GeometryLayerObserver>
 {
   friend class Session;
   friend class GeometryNode;
@@ -795,7 +802,7 @@ private:
 
 /*! Observer interface for geometry node layers.
  */
-class GeometryLayerObserver : public Observer<GeometryLayer, GeometryLayerObserver>
+class GeometryLayerObserver : public Observer<GeometryLayerObserver>
 {
 public:
   /*! Called before a slot is changed in an observed geometry layer.
@@ -914,11 +921,14 @@ public:
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
+  typedef std::vector<bool> ValidityMap;
   typedef std::vector<GeometryLayer*> LayerList;
   typedef std::map<uint32,uint32> VertexIndexMap;
   LayerList mLayers;
   GeometryLayer* mBaseVertexLayer;
   GeometryLayer* mBasePolygonLayer;
+  ValidityMap mValidVertices;
+  ValidityMap mValidPolygons;
 };
 
 //---------------------------------------------------------------------
@@ -934,6 +944,7 @@ public:
    *  @param vertex The base layer data for the newly created vertex.
    */
   virtual void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
+  virtual void onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
   /*! Called before a vertex is deleted in an observed geometry node.
    *  @param node The geometry node containing the vertex to be deleted.
    *  @param vertexID The ID of the vertex to be deleted.
@@ -945,6 +956,7 @@ public:
    *  @param polygon The base layer data for the newly created polygon.
    */
   virtual void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
+  virtual void onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
   /*! Called before a polygon is deleted in an observed geometry node.
    *  @param node The geometry node containing the polygon to be deleted.
    *  @param polygonID The ID of the polygon to be deleted.
@@ -966,7 +978,7 @@ public:
 
 /*! Object method. Represents a single method in an object node.
  */
-class Method : public Observable<MethodObserver, Method>
+class Method : public Observable<MethodObserver>
 {
   friend class Session;
   friend class MethodGroup;
@@ -988,7 +1000,7 @@ private:
 
 /*! Observer interface for object node methods.
  */
-class MethodObserver : public Observer<Method, MethodObserver>
+class MethodObserver : public Observer<MethodObserver>
 {
 public:
   /*! Called when a call has been issued to an observed object method.
@@ -1000,7 +1012,7 @@ public:
 
 /*! Method group class. Represents a single method group in an object node.
  */
-class MethodGroup : public Observable<MethodGroupObserver, MethodGroup>
+class MethodGroup : public Observable<MethodGroupObserver>
 {
   friend class Session;
   friend class ObjectNode;
@@ -1016,7 +1028,7 @@ private:
 
 /*! Observer interface for object node methods.
  */
-class MethodGroupObserver : public Observer<MethodGroupObserver, MethodGroup>
+class MethodGroupObserver : public Observer<MethodGroupObserver>
 {
 public:
   /*! Called after a new method is created in an observed method group.
@@ -1103,7 +1115,7 @@ public:
 
 /*! Session class. Represents a single session with a verse server.
  */
-class Session : public Versioned, public Observable<SessionObserver, Session>
+class Session : public Versioned, public Observable<SessionObserver>
 {
 public:
   /*! Session state enumeration.
@@ -1278,7 +1290,7 @@ private:
 
 //---------------------------------------------------------------------
 
-class SessionObserver : public Observer<Session, SessionObserver>
+class SessionObserver : public Observer<SessionObserver>
 {
 public:
   virtual void onAccept(Session& session);
