@@ -826,6 +826,16 @@ void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID lay
 
   bool created = (layerID == 0 && !node->isVertex(vertexID));
 
+  if (!created)
+  {
+    const GeometryNode::ObserverList& observers = node->mObservers;
+    for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+	observer->onChangeBaseVertex(*node, vertexID, vertex);
+    }
+  }
+
   layer->reserve(vertexID + 1);
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
@@ -940,6 +950,16 @@ void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID
     (*i)->onSetSlot(*layer, polygonID, &polygon);
 
   bool created = (layerID == 1 && node->isPolygon(polygonID));
+
+  if (!created)
+  {
+    const GeometryNode::ObserverList& observers = node->mObservers;
+    for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
+	observer->onChangeBasePolygon(*node, polygonID, polygon);
+    }
+  }
 
   layer->reserve(polygonID + 1);
 
