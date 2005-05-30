@@ -1116,12 +1116,26 @@ void Session::receivePolygonSetFaceReal32(void* user, VNodeID nodeID, VLayerID l
 
 void Session::receiveCreaseSetVertex(void* user, VNodeID nodeID, const char *layer, uint32 def_crease)
 {
-  // TODO: Design crease management.
+  Session* session = getCurrent();
+
+  GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  node->mVertexCreases = layer;
+  node->mVertexDefaultCrease = def_crease;
 }
 
 void Session::receiveCreaseSetEdge(void* user, VNodeID nodeID, const char *layer, uint32 def_crease)
 {
-  // TODO: Design crease management.
+  Session* session = getCurrent();
+
+  GeometryNode* node = dynamic_cast<GeometryNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  node->mEdgeCreases = layer;
+  node->mEdgeDefaultCrease = def_crease;
 }
 
 void Session::receiveBoneCreate(void* user, VNodeID nodeID, uint16 bone_id, const char *weight, const char *reference, uint32 parent, real64 pos_x, real64 pos_y, real64 pos_z, real64 rot_x, real64 rot_y, real64 rot_z, real64 rot_w)
