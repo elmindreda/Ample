@@ -396,7 +396,7 @@ void GeometryLayerObserver::onSetName(GeometryLayer& layer, const std::string& n
 void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint32 defaultInt, real64 defaultReal)
 {
   getSession().push();
-  verse_send_g_layer_create(getID(), ~0, name.c_str(), type, defaultInt, defaultReal);
+  verse_send_g_layer_create(getID(), 0xffffffff, name.c_str(), type, defaultInt, defaultReal);
   getSession().pop();
 }
 
@@ -629,10 +629,40 @@ size_t GeometryNode::getPolygonSize(void) const
   return size;
 }
 
+GeometryLayer* GeometryNode::getVertexCreaseLayer(void)
+{
+  GeometryLayer* layer = getLayerByName(mVertexCreases);
+  if (!layer || layer->getType() != VN_G_LAYER_VERTEX_UINT32)
+    return NULL;
+
+  return layer;
+}
+
+const std::string& GeometryNode::getVertexCreaseLayerName(void) const
+{
+  return mVertexCreases;
+}
+
+GeometryLayer* GeometryNode::getEdgeCreaseLayer(void)
+{
+  GeometryLayer* layer = getLayerByName(mEdgeCreases);
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_CORNER_UINT32)
+    return NULL;
+
+  return layer;
+}
+
+const std::string& GeometryNode::getEdgeCreaseLayerName(void) const
+{
+  return mEdgeCreases;
+}
+
 GeometryNode::GeometryNode(VNodeID ID, VNodeOwner owner, Session& session):
   Node(ID, V_NT_GEOMETRY, owner, session),
   mBaseVertexLayer(NULL),
-  mBasePolygonLayer(NULL)
+  mBasePolygonLayer(NULL),
+  mVertexDefaultCrease(0),
+  mEdgeDefaultCrease(0)
 {
 }
 

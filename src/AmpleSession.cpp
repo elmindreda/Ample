@@ -154,106 +154,106 @@ Session* Session::create(const std::string& address,
 {
   if (!msInitialized)
   {
-    verse_callback_set(verse_send_connect_accept,
+    verse_callback_set((void*) verse_send_connect_accept,
 		       (void*) receiveAccept,
 		       NULL);
-    verse_callback_set(verse_send_connect_terminate,
+    verse_callback_set((void*) verse_send_connect_terminate,
 		       (void*) receiveTerminate,
 		       NULL);
-    verse_callback_set(verse_send_node_create,
+    verse_callback_set((void*) verse_send_node_create,
 		       (void*) receiveNodeCreate,
 		       NULL);
-    verse_callback_set(verse_send_node_destroy,
+    verse_callback_set((void*) verse_send_node_destroy,
 		       (void*) receiveNodeDestroy,
 		       NULL);
-    verse_callback_set(verse_send_node_name_set,
+    verse_callback_set((void*) verse_send_node_name_set,
 		       (void*) receiveNodeNameSet,
 		       NULL);
-    verse_callback_set(verse_send_tag_group_create,
+    verse_callback_set((void*) verse_send_tag_group_create,
                        (void*) receiveTagGroupCreate,
 		       NULL);
-    verse_callback_set(verse_send_tag_group_destroy,
+    verse_callback_set((void*) verse_send_tag_group_destroy,
 		       (void*) receiveTagGroupDestroy,
 		       NULL);
-    verse_callback_set(verse_send_tag_create,
+    verse_callback_set((void*) verse_send_tag_create,
 		       (void*) receiveTagCreate,
 		       NULL);
-    verse_callback_set(verse_send_tag_destroy,
+    verse_callback_set((void*) verse_send_tag_destroy,
 		       (void*) receiveTagDestroy,
 		       NULL);
-    verse_callback_set(verse_send_t_set_language,
+    verse_callback_set((void*) verse_send_t_set_language,
 		       (void*) receiveNodeLanguageSet,
 		       NULL);
-    verse_callback_set(verse_send_t_buffer_create,
+    verse_callback_set((void*) verse_send_t_buffer_create,
 		       (void*) receiveTextBufferCreate,
 		       NULL);
-    verse_callback_set(verse_send_t_buffer_destroy,
+    verse_callback_set((void*) verse_send_t_buffer_destroy,
 		       (void*) receiveTextBufferDestroy,
 		       NULL);
-    verse_callback_set(verse_send_t_text_set,
+    verse_callback_set((void*) verse_send_t_text_set,
 		       (void*) receiveTextBufferSet,
 		       NULL);
-    verse_callback_set(verse_send_g_layer_create,
+    verse_callback_set((void*) verse_send_g_layer_create,
 		       (void*) receiveGeometryLayerCreate,
 		       NULL);
-    verse_callback_set(verse_send_g_layer_destroy,
+    verse_callback_set((void*) verse_send_g_layer_destroy,
 		       (void*) receiveGeometryLayerDestroy,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_set_xyz_real32,
+    verse_callback_set((void*) verse_send_g_vertex_set_xyz_real32,
 		       (void*) receiveVertexSetXyzReal32,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_delete_real32,
+    verse_callback_set((void*) verse_send_g_vertex_delete_real32,
 		       (void*) receiveVertexDeleteReal32,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_set_xyz_real64,
+    verse_callback_set((void*) verse_send_g_vertex_set_xyz_real64,
 		       (void*) receiveVertexSetXyzReal64,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_delete_real64,
+    verse_callback_set((void*) verse_send_g_vertex_delete_real64,
 		       (void*) receiveVertexDeleteReal64,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_set_uint32,
+    verse_callback_set((void*) verse_send_g_vertex_set_uint32,
 		       (void*) receiveVertexSetUint32,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_set_real64,
+    verse_callback_set((void*) verse_send_g_vertex_set_real64,
 		       (void*) receiveVertexSetReal64,
 		       NULL);
-    verse_callback_set(verse_send_g_vertex_set_real32,
-		       (void*) receiveVertexSetReal32,
+    verse_callback_set((void*) verse_send_g_vertex_set_real32,
+        (void*) receiveVertexSetReal32,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_corner_uint32,
+    verse_callback_set((void*) verse_send_g_polygon_set_corner_uint32,
 		       (void*) receivePolygonSetCornerUint32,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_delete,
+    verse_callback_set((void*) verse_send_g_polygon_delete,
 		       (void*) receivePolygonDelete,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_corner_real64,
+    verse_callback_set((void*) verse_send_g_polygon_set_corner_real64,
 		       (void*) receivePolygonSetCornerReal64,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_corner_real32,
+    verse_callback_set((void*) verse_send_g_polygon_set_corner_real32,
 		       (void*) receivePolygonSetCornerReal32,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_face_uint8,
+    verse_callback_set((void*) verse_send_g_polygon_set_face_uint8,
 		       (void*) receivePolygonSetFaceUint8,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_face_uint32,
+    verse_callback_set((void*) verse_send_g_polygon_set_face_uint32,
 		       (void*) receivePolygonSetFaceUint32,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_face_real64,
+    verse_callback_set((void*) verse_send_g_polygon_set_face_real64,
 		       (void*) receivePolygonSetFaceReal64,
 		       NULL);
-    verse_callback_set(verse_send_g_polygon_set_face_real32,
+    verse_callback_set((void*) verse_send_g_polygon_set_face_real32,
 		       (void*) receivePolygonSetFaceReal32,
 		       NULL);
-    verse_callback_set(verse_send_g_crease_set_vertex,
+    verse_callback_set((void*) verse_send_g_crease_set_vertex,
 		       (void*) receiveCreaseSetVertex,
 		       NULL);
-    verse_callback_set(verse_send_g_crease_set_edge,
+    verse_callback_set((void*) verse_send_g_crease_set_edge,
 		       (void*) receiveCreaseSetEdge,
 		       NULL);
-    verse_callback_set(verse_send_g_bone_create,
+    verse_callback_set((void*) verse_send_g_bone_create,
 		       (void*) receiveBoneCreate,
 		       NULL);
-    verse_callback_set(verse_send_g_bone_destroy,
+    verse_callback_set((void*) verse_send_g_bone_destroy,
 		       (void*) receiveBoneDestroy,
 		       NULL);
 
@@ -334,7 +334,7 @@ Session::Session(const std::string& address, const std::string& username, VSessi
   mAddress(address),
   mUserName(username),
   mInternal(internal),
-  mAvatarID(NULL),
+  mAvatarID(0xffffffff),
   mState(CONNECTING)
 {
   msSessions.push_back(this);

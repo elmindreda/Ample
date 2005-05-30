@@ -15,8 +15,8 @@ namespace verse
 
 //---------------------------------------------------------------------
 
-const uint32 INVALID_VERTEX_ID = ~0;
-const uint32 INVALID_POLYGON_ID = ~0;
+const uint32 INVALID_VERTEX_ID = 0xffffffff;
+const uint32 INVALID_POLYGON_ID = 0xffffffff;
 
 //---------------------------------------------------------------------
 
@@ -135,7 +135,7 @@ class Observer
 {
 public:
   typedef Observable<T> ObservableType;
-  friend class ObservableType;
+  friend class Observable<T>;
   /*! Destructor. Detaches the observer from all observed objects.
    */
   inline virtual ~Observer(void);
@@ -918,6 +918,10 @@ public:
   /*! @return The size, in bytes, of all the geometry layer slots that make up a single polygon.
    */
   size_t getPolygonSize(void) const;
+  GeometryLayer* getVertexCreaseLayer(void);
+  const std::string& getVertexCreaseLayerName(void) const;
+  GeometryLayer* getEdgeCreaseLayer(void);
+  const std::string& getEdgeCreaseLayerName(void) const;
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
@@ -929,6 +933,10 @@ private:
   GeometryLayer* mBasePolygonLayer;
   ValidityMap mValidVertices;
   ValidityMap mValidPolygons;
+  std::string mVertexCreases;
+  uint32 mVertexDefaultCrease;
+  std::string mEdgeCreases;
+  uint32 mEdgeDefaultCrease;
 };
 
 //---------------------------------------------------------------------
