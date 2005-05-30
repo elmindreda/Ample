@@ -113,6 +113,14 @@ public:
     printf("Base mesh has %u polygons and %u vertices\n", mesh.mPolygons.size(), mesh.mVertices.size());
   }
   
+  void onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
+  {
+    printf("Changed vertex %u in node %u(%s)\n",
+           vertexID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
   void onDeleteVertex(GeometryNode& node, uint32 vertexID)
   {
     printf("Deleted vertex %u in node %u(%s)\n",
@@ -133,6 +141,14 @@ public:
     printf("Base mesh has %u polygons and %u vertices\n", mesh.mPolygons.size(), mesh.mVertices.size());
   }
   
+  void onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+  {
+    printf("Changed polygon %u in node %u(%s)\n",
+           polygonID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
   void onDeletePolygon(GeometryNode& node, uint32 polygonID)
   {
     printf("Deleted polygon %u in node %u(%s)\n",
@@ -242,7 +258,7 @@ int main(int argc, char** argv)
   else
     host = argv[1];
 
-  Session* session = Session::create(host, "spoo", "fleem");
+  Session* session = Session::create(host, "ample-linter", "secret");
   if (!session)
     return 1;
 
