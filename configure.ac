@@ -18,6 +18,7 @@ AC_ARG_WITH([verse], [AC_HELP_STRING([--with-verse], [location of verse])],
     AC_MSG_ERROR([invalid location "$withval"])
   fi
   CPPFLAGS="-I$withval $CPPFLAGS"
+  LDFLAGS="-L$withval $LDFLAGS"
 ])
 
 # Checks for header files.
