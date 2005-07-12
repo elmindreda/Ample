@@ -64,6 +64,13 @@ void BasePolygon::set(uint32 v0, uint32 v1, uint32 v2, uint32 v3)
   mIndices[3] = v3;
 }
 
+bool BasePolygon::isValid(void) const
+{
+  return mIndices[0] != INVALID_POLYGON_ID &&
+         mIndices[1] != INVALID_POLYGON_ID &&
+	 mIndices[2] != INVALID_POLYGON_ID;
+}
+
 void BasePolygon::setInvalid(void)
 {
   mIndices[0] = INVALID_VERTEX_ID;
@@ -178,6 +185,16 @@ const void* Block::getItem(size_t index) const
     return NULL;
 
   return mData + index * mItemSize;
+}
+
+void* Block::getItems(void)
+{
+  return mData;
+}
+
+const void* Block::getitems(void) const
+{
+  return mData;
 }
 
 void Block::setItem(void* item, size_t index)

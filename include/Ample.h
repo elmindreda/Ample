@@ -1,4 +1,6 @@
 
+// Copyright (c) PDC, KTH
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -15,8 +17,8 @@ namespace verse
 
 //---------------------------------------------------------------------
 
-const uint32 INVALID_VERTEX_ID = 0xffffffff;
-const uint32 INVALID_POLYGON_ID = 0xffffffff;
+const uint32 INVALID_VERTEX_ID = ((uint32) ~0);
+const uint32 INVALID_POLYGON_ID = ((uint32) ~0);
 
 //---------------------------------------------------------------------
 
@@ -81,6 +83,7 @@ class BasePolygon
 public:
   BasePolygon(void);
   BasePolygon(uint32 v0, uint32 v1, uint32 v2, uint32 v3);
+  bool isValid(void) const;
   void set(uint32 v0, uint32 v1, uint32 v2, uint32 v3); 
   void setInvalid(void);
   uint32 mIndices[4];
@@ -113,6 +116,8 @@ public:
   Block& operator = (const Block& source);
   void* getItem(size_t index);
   const void* getItem(size_t index) const;
+  void* getItems(void);
+  const void* getitems(void) const;
   void setItem(void* item, size_t index);
   size_t getItemSize(void) const;
   void setItemSize(size_t size);
@@ -544,6 +549,14 @@ public:
 
 //---------------------------------------------------------------------
 
+class NodeNameObserver : public Observer<NodeNameObserver>
+{
+public:
+  virtual void onNewNode(Node& node);
+};
+
+//---------------------------------------------------------------------
+
 /*! Text node buffer class. Represents a single buffer in a text node.
  */
 class TextBuffer : public Versioned, public Observable<TextBufferObserver>
@@ -922,6 +935,10 @@ public:
   const std::string& getVertexCreaseLayerName(void) const;
   GeometryLayer* getEdgeCreaseLayer(void);
   const std::string& getEdgeCreaseLayerName(void) const;
+  uint32 getHighestVertexID(void) const;
+  uint32 getHighestPolygonID(void) const;
+  uint32 getVertexCount(void) const;
+  uint32 getPolygonCount(void) const;
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
@@ -937,6 +954,10 @@ private:
   uint32 mVertexDefaultCrease;
   std::string mEdgeCreases;
   uint32 mEdgeDefaultCrease;
+  uint32 mHighestVertexID;
+  uint32 mHighestPolygonID;
+  uint32 mVertexCount;
+  uint32 mPolygonCount;
 };
 
 //---------------------------------------------------------------------
@@ -1222,7 +1243,7 @@ public:
    *  This call will cause all the commands issued and received since
    *  the last update to take effect, including triggering observers.
    *  @param microseconds The maximum number of microseconds to block,
-   *  when waiting for new command.
+   *  when waiting for new commands.
    */
   static void update(uint32 microseconds);
   /*! Terminates all connected sessions with the specified message.
@@ -1311,5 +1332,6 @@ public:
 
   } /*namespace ample*/
 } /*namespace verse*/
+
 
 

@@ -662,7 +662,11 @@ GeometryNode::GeometryNode(VNodeID ID, VNodeOwner owner, Session& session):
   mBaseVertexLayer(NULL),
   mBasePolygonLayer(NULL),
   mVertexDefaultCrease(0),
-  mEdgeDefaultCrease(0)
+  mEdgeDefaultCrease(0),
+  mHighestVertexID(INVALID_VERTEX_ID),
+  mHighestPolygonID(INVALID_POLYGON_ID),
+  mVertexCount(0),
+  mPolygonCount(0)
 {
 }
 

@@ -358,7 +358,7 @@ void Session::receiveAccept(void* user, VNodeID avatarID, const char* address, u
     (*i)->onAccept(*session);
 
   // Subscribe to all node types
-  verse_send_node_list(session->mTypeMask);
+  verse_send_node_index_subscribe(session->mTypeMask);
 }
 
 void Session::receiveTerminate(void* user, const char* address, const char* byebye)
@@ -849,6 +849,10 @@ void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID lay
 
   if (created)
   {
+    node->mVertexCount++;
+    if (vertexID > node->mHighestVertexID)
+      node->mHighestVertexID = vertexID;
+
     layer->updateStructure();
 
     const GeometryNode::ObserverList& observers = node->mObservers;
@@ -882,6 +886,26 @@ void Session::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 verte
   }
 
   vertex->setInvalid();
+
+  if (vertexID == node->mHighestVertexID)
+  {
+    BaseVertex* vertices = reinterpret_cast<BaseVertex*>(node->mBaseVertexLayer->mData.getItems());
+
+    uint32 index = vertexID;
+    while (index--)
+    {
+      if (vertices[index].isValid())
+      {
+	node->mHighestVertexID = index;
+	break;
+      }
+    }
+
+    if (!index)
+      node->mHighestVertexID = INVALID_VERTEX_ID;
+  }
+
+  node->mVertexCount--;
   node->mBaseVertexLayer->updateStructure();
 }
 
@@ -972,6 +996,10 @@ void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID
 
   if (created)
   {
+    node->mPolygonCount++;
+    if (polygonID > node->mHighestPolygonID)
+      node->mHighestPolygonID = polygonID;
+
     layer->updateStructure();
 
     const GeometryNode::ObserverList& observers = node->mObservers;
@@ -1005,6 +1033,26 @@ void Session::receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID)
   }
 
   polygon->setInvalid();
+
+  if (polygonID == node->mHighestPolygonID)
+  {
+    BasePolygon* polygons = reinterpret_cast<BasePolygon*>(node->mBasePolygonLayer->mData.getItems());
+
+    uint32 index = polygonID;
+    while (index--)
+    {
+      if (polygons[index].isValid())
+      {
+	node->mHighestPolygonID = index;
+	break;
+      }
+    }
+
+    if (!index)
+      node->mHighestPolygonID = INVALID_POLYGON_ID;
+  }
+
+  node->mPolygonCount--;
   node->mBasePolygonLayer->updateStructure();
 }
 
