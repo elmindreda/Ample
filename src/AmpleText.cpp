@@ -83,6 +83,10 @@ void TextBufferObserver::onSetName(TextBuffer& buffer, const std::string& name)
 {
 }
 
+void TextBufferObserver::onDestroy(TextBuffer& buffer)
+{
+}
+
 //---------------------------------------------------------------------
 
 void TextNode::createBuffer(const std::string& name)

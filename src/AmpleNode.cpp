@@ -138,6 +138,10 @@ void NodeObserver::onSetName(Node& node, const std::string& name)
 {
 }
 
+void NodeObserver::onDestroy(Node& node)
+{
+}
+
 //---------------------------------------------------------------------
 
   } /*namespace ample*/

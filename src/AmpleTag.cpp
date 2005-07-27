@@ -93,6 +93,10 @@ void TagObserver::onSetName(Tag& tag, const std::string name)
 {
 }
 
+void TagObserver::onDestroy(Tag& tag)
+{
+}
+
 //---------------------------------------------------------------------
 
 void TagGroup::destroy(void)
@@ -216,6 +220,10 @@ void TagGroupObserver::onDestroyTag(TagGroup& group, Tag& tag)
 }
 
 void TagGroupObserver::onSetName(TagGroup& group, const std::string& name)
+{
+}
+
+void TagGroupObserver::onDestroy(TagGroup& group)
 {
 }
 

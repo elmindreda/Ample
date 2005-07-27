@@ -442,9 +442,19 @@ void Session::receiveNodeDestroy(void* user, VNodeID ID)
   {
     if ((*node)->getID() == ID)
     {
-      const ObserverList& observers = session->mObservers;
-      for (ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-	(*observer)->onDestroyNode(*session, *(*node));
+      // Notify node observers.
+      {
+        const Node::ObserverList& observers = (*node)->mObservers;
+        for (Node::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*node));
+      }
+
+      // Notify session observers.
+      {
+        const ObserverList& observers = session->mObservers;
+        for (ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroyNode(*session, *(*node));
+      }
 
       delete *node;
       nodes.erase(node);
@@ -516,9 +526,19 @@ void Session::receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID)
   {
     if ((*group)->getID() == groupID)
     {
-      const Node::ObserverList& observers = node->mObservers;
-      for (Node::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-	(*observer)->onDestroyTagGroup(*node, *(*group));
+      // Notify tag group observers.
+      {
+        const TagGroup::ObserverList& observers = (*group)->mObservers;
+        for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*group));
+      }
+      
+      // Notify node observers.
+      {
+        const Node::ObserverList& observers = node->mObservers;
+        for (Node::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroyTagGroup(*node, *(*group));
+      }
       
       delete *group;
       groups.erase(group);
@@ -594,9 +614,19 @@ void Session::receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 t
   {
     if ((*tag)->getID() == tagID)
     {
-      const TagGroup::ObserverList& observers = group->mObservers;
-      for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-	(*observer)->onDestroyTag(*group, *(*tag));
+      // Notify tag observers.
+      {
+        const Tag::ObserverList& observers = (*tag)->mObservers;
+        for (Tag::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*tag));
+      }
+
+      // Notify tag group observers.
+      {
+        const TagGroup::ObserverList& observers = group->mObservers;
+        for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroyTag(*group, *(*tag));
+      }
 
       delete *tag;
       tags.erase(tag);
@@ -674,6 +704,14 @@ void Session::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferI
   {
     if ((*buffer)->getID() == bufferID)
     {
+      // Notify text buffer observers.
+      {
+        const TextBuffer::ObserverList& observers = (*buffer)->mObservers;
+        for (TextBuffer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*buffer));
+      }
+
+      // Notify text node observers.
       const TextNode::ObserverList& observers = node->mObservers;
       for (TextNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       {
@@ -786,6 +824,14 @@ void Session::receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layer
   {
     if ((*layer)->getID() == layerID)
     {
+      // Notify geometry layer observers.
+      {
+        const GeometryLayer::ObserverList& observers = (*layer)->mObservers;
+        for (GeometryLayer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*layer));
+      }
+
+      // Notify geometry node observers.
       const GeometryNode::ObserverList& observers = node->mObservers;
       for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       {
@@ -977,7 +1023,7 @@ void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID
   for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onSetSlot(*layer, polygonID, &polygon);
 
-  bool created = (layerID == 1 && node->isPolygon(polygonID));
+  bool created = (layerID == 1 && !node->isPolygon(polygonID));
 
   if (!created)
   {

@@ -391,6 +391,10 @@ void GeometryLayerObserver::onSetName(GeometryLayer& layer, const std::string& n
 {
 }
 
+void GeometryLayerObserver::onDestroy(GeometryLayer& layer)
+{
+}
+
 //---------------------------------------------------------------------
 
 void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint32 defaultInt, real64 defaultReal)

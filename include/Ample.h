@@ -328,6 +328,7 @@ public:
    *  @param name The new name of the tag.
    */
   virtual void onSetName(Tag& tag, const std::string name);
+  virtual void onDestroy(Tag& tag);
 };
 
 //---------------------------------------------------------------------
@@ -429,6 +430,7 @@ public:
    *  @param name The new name of the tag group.
    */
   virtual void onSetName(TagGroup& group, const std::string& name);
+  virtual void onDestroy(TagGroup& group);
 };
 
 //---------------------------------------------------------------------
@@ -545,6 +547,7 @@ public:
    *  @param name The new name of the tag group.
    */
   virtual void onSetName(Node& node, const std::string& name);
+  virtual void onDestroy(Node& node);
 };
 
 //---------------------------------------------------------------------
@@ -553,6 +556,7 @@ class NodeNameObserver : public Observer<NodeNameObserver>
 {
 public:
   virtual void onNewNode(Node& node);
+  virtual void onDestroyNode(Node& node);
 };
 
 //---------------------------------------------------------------------
@@ -634,6 +638,7 @@ public:
    *  @param name The new name of the text buffer.
    */
   virtual void onSetName(TextBuffer& buffer, const std::string& name);
+  virtual void onDestroy(TextBuffer& buffer);
 };
 
 //---------------------------------------------------------------------
@@ -829,6 +834,7 @@ public:
    *  @param name The new name of the geometry layer.
    */
   virtual void onSetName(GeometryLayer& layer, const std::string& name);
+  virtual void onDestroy(GeometryLayer& layer);
 };
 
 //---------------------------------------------------------------------
@@ -1005,6 +1011,23 @@ public:
 
 //---------------------------------------------------------------------
 
+struct MethodParam
+{
+  MethodParam(const std::string& name, VNOParamType type);
+  std::string mName;
+  VNOParamType mType;
+};
+
+//---------------------------------------------------------------------
+
+typedef std::vector<MethodParam> MethodParamList;
+                                                         
+//---------------------------------------------------------------------
+
+typedef std::vector<VNOParam> MethodArgumentList;
+
+//---------------------------------------------------------------------
+
 /*! Object method. Represents a single method in an object node.
  */
 class Method : public Observable<MethodObserver>
@@ -1012,15 +1035,17 @@ class Method : public Observable<MethodObserver>
   friend class Session;
   friend class MethodGroup;
 public:
-  /*! Issues a call to this method.
+  /*! Issues a call to this method with the specified arguments.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
-  void call(/*parameters*/);
+  void call(const MethodArgumentList& arguments);
   /*! @return The name of this object method.
    */
   const std::string& getName(void) const;
+  uint8 getParamCount(void) const;
+  const MethodParam& getParam(uint8 index);
 private:
   std::string mName;
 };
@@ -1034,7 +1059,8 @@ class MethodObserver : public Observer<MethodObserver>
 public:
   /*! Called when a call has been issued to an observed object method.
    */
-  virtual void onCall(/*parameters*/);  
+  virtual void onCall(Method& method, const MethodArgumentList& arguments);  
+  virtual void onDestroy(Method& method);
 };
 
 //---------------------------------------------------------------------
@@ -1046,6 +1072,7 @@ class MethodGroup : public Observable<MethodGroupObserver>
   friend class Session;
   friend class ObjectNode;
 public:
+  void createMethod(const std::string& name, const MethodParamList& parameters);
   /*! @return The name of this method group.
    */
   const std::string& getName(void) const;
@@ -1070,6 +1097,7 @@ public:
    *  @param method The object method to be destroyed.
    */
   virtual void onDestroyMethod(MethodGroup& group, Method& method);
+  virtual void onDestroy(MethodGroup& group);
 };
 
 //---------------------------------------------------------------------
