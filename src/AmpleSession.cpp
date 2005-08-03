@@ -896,7 +896,7 @@ void Session::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID lay
   if (created)
   {
     node->mVertexCount++;
-    if (vertexID > node->mHighestVertexID)
+    if (node->mHighestVertexID == INVALID_VERTEX_ID || vertexID > node->mHighestVertexID)
       node->mHighestVertexID = vertexID;
 
     layer->updateStructure();
@@ -947,7 +947,7 @@ void Session::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 verte
       }
     }
 
-    if (!index)
+    if (node->mHighestVertexID != index)
       node->mHighestVertexID = INVALID_VERTEX_ID;
   }
 
@@ -1043,7 +1043,7 @@ void Session::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID
   if (created)
   {
     node->mPolygonCount++;
-    if (polygonID > node->mHighestPolygonID)
+    if (node->mHighestPolygonID == INVALID_POLYGON_ID || polygonID > node->mHighestPolygonID)
       node->mHighestPolygonID = polygonID;
 
     layer->updateStructure();
@@ -1094,7 +1094,7 @@ void Session::receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID)
       }
     }
 
-    if (!index)
+    if (node->mHighestPolygonID != index)
       node->mHighestPolygonID = INVALID_POLYGON_ID;
   }
 

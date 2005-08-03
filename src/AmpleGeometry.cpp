@@ -661,6 +661,26 @@ const std::string& GeometryNode::getEdgeCreaseLayerName(void) const
   return mEdgeCreases;
 }
 
+uint32 GeometryNode::getHighestVertexID(void) const
+{
+  return mHighestVertexID;
+}
+
+uint32 GeometryNode::getHighestPolygonID(void) const
+{
+  return mHighestPolygonID;
+}
+
+uint32 GeometryNode::getVertexCount(void) const
+{
+  return mVertexCount;
+}
+
+uint32 GeometryNode::getPolygonCount(void) const
+{
+  return mPolygonCount;
+}
+
 GeometryNode::GeometryNode(VNodeID ID, VNodeOwner owner, Session& session):
   Node(ID, V_NT_GEOMETRY, owner, session),
   mBaseVertexLayer(NULL),
