@@ -2,5 +2,5 @@
 lib_LIBRARIES = libample.a
 
 libample_a_SOURCES = Ample.cpp AmpleGeometry.cpp AmpleNode.cpp \
-  AmpleSession.cpp AmpleTag.cpp AmpleText.cpp
+  AmpleObject.cpp AmpleSession.cpp AmpleTag.cpp AmpleText.cpp
 
