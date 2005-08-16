@@ -404,7 +404,7 @@ private:
   typedef std::vector<Tag*> TagList;
   TagList mTags;
   std::string mName;
-  unsigned short mID;
+  uint16 mID;
   Node& mNode;
 };
   
@@ -1035,19 +1035,33 @@ class Method : public Observable<MethodObserver>
   friend class Session;
   friend class MethodGroup;
 public:
+  /*! Destroys this method.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
+  void destroy(void);
   /*! Issues a call to this method with the specified arguments.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
   void call(const MethodArgumentList& arguments);
+  /*! @return The ID of this object method.
+   */
+  uint16 getID(void) const;
   /*! @return The name of this object method.
    */
   const std::string& getName(void) const;
   uint8 getParamCount(void) const;
   const MethodParam& getParam(uint8 index);
+  MethodGroup& getGroup(void) const;
 private:
+  Method(uint16 ID, const std::string& name, MethodGroup& group);
+  MethodParamList mParams;
+  uint16 mID;
   std::string mName;
+  MethodGroup& mGroup;
 };
 
 //---------------------------------------------------------------------
@@ -1072,12 +1086,55 @@ class MethodGroup : public Observable<MethodGroupObserver>
   friend class Session;
   friend class ObjectNode;
 public:
+  /*! Destroys this method group.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
+  void destroy(void);
   void createMethod(const std::string& name, const MethodParamList& parameters);
+  /*! @param methodID The ID of the desired method.
+   *  @return The method with the specified ID, or @c NULL if no such method exists.
+   */
+  Method* getMethodByID(uint16 methodID);
+  /*! @param methodID The ID of the desired method.
+   *  @return The method with the specified ID, or @c NULL if no such method exists.
+   */
+  const Method* getMethodByID(uint16 methodID) const;
+  /*! @param index The index of the desired method.
+   *  @return The method at the specified index, or @c NULL if no such method exists.
+   */
+  Method* getMethodByIndex(unsigned int index);
+  /*! @param index The index of the desired method.
+   *  @return The method at the specified index, or @c NULL if no such method exists.
+   */
+  const Method* getMethodByIndex(unsigned int index) const;
+  /*! @param name The name of the desired method.
+   *  @return The method with the specified name, or @c NULL if no such method exists.
+   */
+  Method* getMethodByName(const std::string& name);
+  /*! @param name The name of the desired method.
+   *  @return The method with the specified name, or @c NULL if no such method exists.
+   */
+  const Method* getMethodByName(const std::string& name) const;
+  /*! @return The number of methods in this node.
+   */
+  unsigned int getMethodCount(void) const;
+  /*! @return The ID of this method group.
+   */
+  const uint16 getID(void) const;
   /*! @return The name of this method group.
    */
   const std::string& getName(void) const;
+  ObjectNode& getNode(void) const;
 private:
+  MethodGroup(uint16 ID, const std::string& name, ObjectNode& node);
+  ~MethodGroup(void);
+  typedef std::vector<Method*> MethodList;
+  MethodList mMethods;
+  uint16 mID;
   std::string mName;
+  ObjectNode& mNode;
 };
 
 //---------------------------------------------------------------------
@@ -1142,6 +1199,11 @@ public:
   /*! @return The number of method groups in this node.
    */
   unsigned int getMethodGroupCount(void) const;
+  const Vector3d& getPosition(void) const;
+  const Vector3d& getSpeed(void) const;
+  const Vector3d& getAcceleration(void) const;
+  const Vector3d& getScale(void) const;
+  const Quaternion64& getRotation(void) const;
 private:
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~ObjectNode(void);

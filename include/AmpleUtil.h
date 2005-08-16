@@ -311,6 +311,28 @@ inline void Vector3<T>::set(T sx, T sy, T sz)
 
 //---------------------------------------------------------------------
 
+template <typename T>
+class Quaternion
+{
+public:
+  inline Quaternion(void);
+  inline Quaternion(T sx, T sy, T sz, T sw);
+  inline bool operator == (const Quaternion<T>& quaternion) const;
+  inline bool operator != (const Quaternion<T>& quaternion) const;
+  inline void set(T sx, T sy, T sz, T sw);
+  T x;
+  T y;
+  T z;
+  T w;
+};
+
+//---------------------------------------------------------------------
+
+typedef Quaternion<real32> Quaternion32;
+typedef Quaternion<real64> Quaternion64;
+
+//---------------------------------------------------------------------
+
   } /*namespace ample*/
 } /*namespace verse*/
 
