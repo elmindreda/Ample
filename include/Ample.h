@@ -144,6 +144,8 @@ public:
   /*! Destructor. Detaches the observer from all observed objects.
    */
   inline virtual ~Observer(void);
+  /*! Detaches all observed objects from this observer.
+   */
   inline void detachObservables(void);
 private:
   typedef std::vector<ObservableType*> ObservableList;
@@ -328,6 +330,9 @@ public:
    *  @param name The new name of the tag.
    */
   virtual void onSetName(Tag& tag, const std::string name);
+  /*! Called before an observed tag is destroyed.
+   *  @param tag The tag to be destroyed.
+   */
   virtual void onDestroy(Tag& tag);
 };
 
@@ -430,6 +435,9 @@ public:
    *  @param name The new name of the tag group.
    */
   virtual void onSetName(TagGroup& group, const std::string& name);
+  /*! Called before an observed tag group is destroyed.
+   *  @param group The tag group to be destroyed.
+   */
   virtual void onDestroy(TagGroup& group);
 };
 
@@ -441,7 +449,7 @@ class Node : public Versioned, public Observable<NodeObserver>
 {
   friend class Session;
 public:
-  enum Type { OBJECT, GEOMETRY, MATERIAL, BITMAP, TEXT, CURVE, AUDIO };
+  // enum Type { OBJECT, GEOMETRY, MATERIAL, BITMAP, TEXT, CURVE, AUDIO };
   /*! Destroys this node.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
@@ -547,6 +555,9 @@ public:
    *  @param name The new name of the tag group.
    */
   virtual void onSetName(Node& node, const std::string& name);
+  /*! Called before an observed node is destroyed.
+   *  @param node The node to be destroyed.
+   */
   virtual void onDestroy(Node& node);
 };
 
@@ -638,6 +649,9 @@ public:
    *  @param name The new name of the text buffer.
    */
   virtual void onSetName(TextBuffer& buffer, const std::string& name);
+  /*! Called before an observed text buffer is destroyed.
+   *  @param buffer The text buffer to be destroyed.
+   */
   virtual void onDestroy(TextBuffer& buffer);
 };
 
@@ -834,6 +848,9 @@ public:
    *  @param name The new name of the geometry layer.
    */
   virtual void onSetName(GeometryLayer& layer, const std::string& name);
+  /*! Called before an observed geometry layer is destroyed.
+   *  @param layer The geometry layer to be destroyed.
+   */
   virtual void onDestroy(GeometryLayer& layer);
 };
 
@@ -979,6 +996,11 @@ public:
    *  @param vertex The base layer data for the newly created vertex.
    */
   virtual void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
+  /*! Called before a change is made to the base layer of a vertex in an observed geometry node.
+   *  @param node The node containing the vertex to be changed.
+   *  @param vertexID The ID of the vertex to be changed.
+   *  @param vertex The new base layer data for the vertex.
+   */
   virtual void onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex);
   /*! Called before a vertex is deleted in an observed geometry node.
    *  @param node The geometry node containing the vertex to be deleted.
@@ -991,6 +1013,11 @@ public:
    *  @param polygon The base layer data for the newly created polygon.
    */
   virtual void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
+  /*! Called before a change is made to the base layer of a polygon in an observed geometry node.
+   *  @param node The node containing the polygon to be changed.
+   *  @param polygonID The ID of the polygon to be changed.
+   *  @param polygon The new base layer data for the polygon.
+   */
   virtual void onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon);
   /*! Called before a polygon is deleted in an observed geometry node.
    *  @param node The geometry node containing the polygon to be deleted.
@@ -1072,8 +1099,13 @@ class MethodObserver : public Observer<MethodObserver>
 {
 public:
   /*! Called when a call has been issued to an observed object method.
+   *  @param method The method which has been called.
+   *  @param arguments The arguments passed to the called method.
    */
   virtual void onCall(Method& method, const MethodArgumentList& arguments);  
+  /*! Called before an observed method is destroyed.
+   *  @param method The method to be destroyed.
+   */
   virtual void onDestroy(Method& method);
 };
 
@@ -1126,6 +1158,8 @@ public:
   /*! @return The name of this method group.
    */
   const std::string& getName(void) const;
+  /*! @return The node containing this method group.
+   */
   ObjectNode& getNode(void) const;
 private:
   MethodGroup(uint16 ID, const std::string& name, ObjectNode& node);
@@ -1154,7 +1188,54 @@ public:
    *  @param method The object method to be destroyed.
    */
   virtual void onDestroyMethod(MethodGroup& group, Method& method);
+  /*! Called before an observed method group is destroyed.
+   *  @param group The method group to be destroyed.
+   */
   virtual void onDestroy(MethodGroup& group);
+};
+
+//---------------------------------------------------------------------
+
+class Link
+{
+public:
+  void destroy(void);
+  VNodeID getNodeID(void) const;
+  uint16 getID(void) const;
+  const std::string& getName(void) const;
+  ObjectNode& getNode(void) const;
+private:
+  Link(uint16 ID, ObjectNode& node);
+  VNodeID mNodeID;
+  uint16 mID;
+  std::string mName;
+  ObjectNode& mNode;
+};
+
+//---------------------------------------------------------------------
+
+struct Translation
+{
+  Vector3d mPosition;
+  Vector3d mAccel;
+  Vector3d mSpeed;
+  Vector3d mDragNormal;
+  uint32 mSeconds;
+  uint32 mFraction;
+  real64 mDrag; 
+};
+
+//---------------------------------------------------------------------
+
+struct Rotation
+{
+  Quaternion64 mRotation;
+  Quaternion64 mRotSpeed;
+  Quaternion64 mRotAccel;
+  Quaternion64 mDragNormal;
+  uint32 mSeconds;
+  uint32 mFraction;
+  real64 mDrag;
 };
 
 //---------------------------------------------------------------------
@@ -1172,6 +1253,15 @@ public:
    *  Session::update.
    */
   void createMethodGroup(const std::string& name);
+  /*! Creates a new link to the specified node.
+   *  @param name The desired name of the link.
+   *  @param nodeID The ID of the node to link to.
+   *  @param targetID Who knows.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
+  void createLink(const std::string& name, VNodeID nodeID, VNodeID targetID = (VNodeID) ~0);
   /*! @param groupID The ID of the desired method group.
    *  @return The method group with the specified ID, or @c NULL if no such method group exists.
    */
@@ -1199,16 +1289,55 @@ public:
   /*! @return The number of method groups in this node.
    */
   unsigned int getMethodGroupCount(void) const;
-  const Vector3d& getPosition(void) const;
-  const Vector3d& getSpeed(void) const;
-  const Vector3d& getAcceleration(void) const;
+  /*! @param groupID The ID of the desired link.
+   *  @return The link with the specified ID, or @c NULL if no such link exists.
+   */
+  Link* getLinkByID(uint16 groupID);
+  /*! @param groupID The ID of the desired link.
+   *  @return The link with the specified ID, or @c NULL if no such link exists.
+   */
+  const Link* getLinkByID(uint16 groupID) const;
+  /*! @param index The index of the desired link.
+   *  @return The link at the specified index, or @c NULL if no such link exists.
+   */
+  Link* getLinkByIndex(unsigned int index);
+  /*! @param index The index of the desired link.
+   *  @return The link at the specified index, or @c NULL if no such link exists.
+   */
+  const Link* getLinkByIndex(unsigned int index) const;
+  /*! @param name The name of the desired link
+   *  @return The link with the specified name, or @c NULL if no such link exists.
+   */
+  Link* getLinkByName(const std::string& name);
+  /*! @param name The name of the desired link
+   *  @return The link with the specified name, or @c NULL if no such link exists.
+   */
+  const Link* getLinkByName(const std::string& name) const;
+  /*! @return The number of links in this node.
+   */
+  unsigned int getLinkCount(void) const;
+  /*! @return The translation properties of this object node.
+   */
+  const Translation& getTranslation(void) const;
+  void setTranslation(const Translation& translation);
+  /*! @return The rotation properties of this object node.
+   */
+  const Rotation& getRotation(void) const;
+  void setRotation(const Rotation& rotation);
+  /*! @return The scale of this object node.
+   */
   const Vector3d& getScale(void) const;
-  const Quaternion64& getRotation(void) const;
+  void setScale(const Vector3d& scale);
 private:
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~ObjectNode(void);
   typedef std::vector<MethodGroup*> MethodGroupList;
+  typedef std::vector<Link*> LinkList;
   MethodGroupList mGroups;
+  LinkList mLinks;
+  Translation mTranslation;
+  Rotation mRotation;
+  Vector3d mScale;
 };
 
 //---------------------------------------------------------------------
@@ -1412,9 +1541,24 @@ private:
 class SessionObserver : public Observer<SessionObserver>
 {
 public:
+  /*! Called after an observed session has been accepted by the server.
+   *  @param session The newly accepted session.
+   */
   virtual void onAccept(Session& session);
+  /*! Called after an observed session has been terminated.
+   *  @param session The newly terminated session.
+   *  @param byebye The termination message from the server.
+   */
   virtual void onTerminate(Session& session, const std::string& byebye);
+  /*! Called after a node is created in an observed session.
+   *  @param session The session in which the node was created.
+   *  @param node The newly created node.
+   */
   virtual void onCreateNode(Session& session, Node& node);
+  /*! Called before a node is destroyed in an observed session.
+   *  @param session The session containing the node to be destroyed.
+   *  @param node The node to be destroyed.
+   */
   virtual void onDestroyNode(Session& session, Node& node);
 };
 

@@ -195,6 +195,94 @@ unsigned int ObjectNode::getMethodGroupCount(void) const
   return mGroups.size();
 }
 
+Link* ObjectNode::getLinkByID(uint16 linkID)
+{
+  for (LinkList::iterator i = mLinks.begin();  i != mLinks.end();  i++)
+    if ((*i)->getID() == linkID)
+      return *i;
+
+  return NULL;
+}
+
+const Link* ObjectNode::getLinkByID(uint16 linkID) const
+{
+  for (LinkList::const_iterator i = mLinks.begin();  i != mLinks.end();  i++)
+    if ((*i)->getID() == linkID)
+      return *i;
+
+  return NULL;
+}
+
+Link* ObjectNode::getLinkByIndex(unsigned int index)
+{
+  return mLinks[index];
+}
+
+const Link* ObjectNode::getLinkByIndex(unsigned int index) const
+{
+  return mLinks[index];
+}
+
+Link* ObjectNode::getLinkByName(const std::string& name)
+{
+  for (LinkList::iterator i = mLinks.begin();  i != mLinks.end();  i++)
+    if ((*i)->getName() == name)
+      return *i;
+
+  return NULL;
+}
+
+const Link* ObjectNode::getLinkByName(const std::string& name) const
+{
+  for (LinkList::const_iterator i = mLinks.begin();  i != mLinks.end();  i++)
+    if ((*i)->getName() == name)
+      return *i;
+
+  return NULL;
+}
+
+unsigned int ObjectNode::getLinkCount(void) const
+{
+  return mLinks.size();
+}
+
+const Translation& ObjectNode::getTranslation(void) const
+{
+  return mTranslation;
+}
+
+void ObjectNode::setTranslation(const Translation& translation)
+{
+  getSession().push();
+  verse_send_o_transform_pos_real64(getID(),
+                                    translation.mSeconds,
+                                    translation.mFraction,
+                                    translation.mPosition,
+                                    translation.mSpeed,
+                                    translation.mAccel, 
+                                    translation.mDragNormal,
+                                    translation.mDrag);
+  getSession().pop();
+}
+
+const Rotation& ObjectNode::getRotation(void) const
+{
+  return mRotation;
+}
+
+void ObjectNode::setRotation(const Rotation& rotation)
+{
+}
+
+const Vector3d& ObjectNode::getScale(void) const
+{
+  return mScale;
+}
+
+void ObjectNode::setScale(const Vector3d& scale)
+{
+}
+
 ObjectNode::ObjectNode(VNodeID ID, VNodeOwner owner, Session& session):
   Node(ID, V_NT_OBJECT, owner, session)
 {

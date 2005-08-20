@@ -48,6 +48,8 @@ public:
   inline void mirrorBy(const Vector3<T>& vector);
   inline void invert(void);
   inline void normalize(void);
+  inline operator T* (void);
+  inline operator const T* (void) const;
   inline Vector3 operator - (void) const;
   inline Vector3 operator + (T value) const;
   inline Vector3 operator - (T value) const;
@@ -161,6 +163,18 @@ inline void Vector3<T>::normalize(void)
   x *= scale;
   y *= scale;
   z *= scale;
+}
+
+template <typename T>
+inline Vector3<T>::operator T* (void)
+{
+  return &x;
+}
+
+template <typename T>
+inline Vector3<T>::operator const T* (void) const
+{
+  return &x;
 }
 
 template <typename T>
@@ -317,6 +331,8 @@ class Quaternion
 public:
   inline Quaternion(void);
   inline Quaternion(T sx, T sy, T sz, T sw);
+  inline operator T* (void);
+  inline operator const T* (void) const;
   inline bool operator == (const Quaternion<T>& quaternion) const;
   inline bool operator != (const Quaternion<T>& quaternion) const;
   inline void set(T sx, T sy, T sz, T sw);
@@ -325,6 +341,55 @@ public:
   T z;
   T w;
 };
+
+//---------------------------------------------------------------------
+
+template <typename T>
+inline Quaternion<T>::Quaternion(void)
+{
+}
+
+template <typename T>
+inline Quaternion<T>::Quaternion(T sx, T sy, T sz, T sw):
+  x(sx),
+  y(sy),
+  z(sz),
+  w(sw)
+{
+}
+
+template <typename T>
+inline Quaternion<T>::operator T* (void)
+{
+  return &x;
+}
+
+template <typename T>
+inline Quaternion<T>::operator const T* (void) const
+{
+  return &x;
+}
+
+template <typename T>
+inline bool Quaternion<T>::operator == (const Quaternion<T>& quaternion) const
+{
+  return x == quaternion.x && y == quaternion.y && z == quaternion.z && w == quaternion.w;
+}
+
+template <typename T>
+inline bool Quaternion<T>::operator != (const Quaternion<T>& quaternion) const
+{
+  return x != quaternion.x || y != quaternion.y || z != quaternion.z || w != quaternion.w;
+}
+
+template <typename T>
+inline void Quaternion<T>::set(T sx, T sy, T sz, T sw)
+{
+  x = sx;
+  y = sy;
+  z = sz;
+  w = sw;
+}
 
 //---------------------------------------------------------------------
 
