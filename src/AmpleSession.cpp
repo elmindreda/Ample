@@ -67,6 +67,12 @@ void Session::terminate(const std::string& byebye)
   pop();
 }
 
+void Session::destroy(void)
+{
+  if (mState == TERMINATED)
+    mState = RELEASED;
+}
+
 void Session::createNode(const std::string& name, VNodeType type)
 {
   push();
@@ -297,11 +303,28 @@ Session* Session::find(const std::string& address)
 
 void Session::update(uint32 microseconds)
 {
-  for (SessionList::iterator i = msSessions.begin();  i != msSessions.end();  i++)
+  for (SessionList::iterator session = msSessions.begin();  session != msSessions.end();  )
   {
-    (*i)->push();
-    verse_callback_update(microseconds);
-    (*i)->pop();
+    if ((*session)->mState == RELEASED)
+    {
+      const ObserverList& observers = (*session)->mObservers;
+      for (ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+        (*observer)->onDestroy(*(*session));
+
+      SessionList::iterator released = session++;
+      msSessions.erase(released);
+    }
+    else
+    {
+      if ((*session)->mState == CONNECTING || (*session)->mState == CONNECTED)
+      {
+        (*session)->push();
+        verse_callback_update(microseconds);
+        (*session)->pop();
+      }
+
+      session++;
+    }
   }
 }
 
@@ -1277,6 +1300,10 @@ void SessionObserver::onAccept(Session& session)
 }
 
 void SessionObserver::onTerminate(Session& session, const std::string& byebye)
+{
+}
+
+void SessionObserver::onDestroy(Session& session)
 {
 }
 

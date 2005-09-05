@@ -1504,7 +1504,11 @@ public:
     /*! The session is terminated. The object will remain for inspection
      *  until a new session is created with the same server.
      */
-    TERMINATED
+    TERMINATED,
+    /*! The session is released, i.e. flagged for deletion. The object will
+     *  remain until the first subsequent call to Session::update.
+     */
+    RELEASED,
   };
   /*! Pushes this session onto the internal stack and makes it the active session.
    */
@@ -1519,6 +1523,11 @@ public:
    *  Session::update.
    */
   void terminate(const std::string& byebye);
+  /*! Flags a terminated session for destruction. Actual destruction will take place at
+   *  the first subsequent call to Session::update.
+   *  Note that this call has no effect if the session isn't in the terminated state.
+   */
+  void destroy(void);
   /*! Creates a node with the specified name and of the specified type.
    *  @param name The desired name of the node.
    *  @param type The desired type of the node.
@@ -1677,6 +1686,10 @@ public:
    *  @param byebye The termination message from the server.
    */
   virtual void onTerminate(Session& session, const std::string& byebye);
+  /*! Called befiore an observed session is destroyed.
+   *  @param session The session to be destroyed.
+   */
+  virtual void onDestroy(Session& session);
   /*! Called after a node is created in an observed session.
    *  @param session The session in which the node was created.
    *  @param node The newly created node.
