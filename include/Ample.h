@@ -1523,11 +1523,11 @@ public:
    *  Session::update.
    */
   void terminate(const std::string& byebye);
-  /*! Flags a terminated session for destruction. Actual destruction will take place at
+  /*! Schedules a terminated session for destruction. Actual destruction will take place at
    *  the first subsequent call to Session::update.
-   *  Note that this call has no effect if the session isn't in the terminated state.
+   *  Note that this call has no effect unless the session is in the terminated state.
    */
-  void destroy(void);
+  void release(void);
   /*! Creates a node with the specified name and of the specified type.
    *  @param name The desired name of the node.
    *  @param type The desired type of the node.

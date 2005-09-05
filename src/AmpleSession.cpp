@@ -67,7 +67,7 @@ void Session::terminate(const std::string& byebye)
   pop();
 }
 
-void Session::destroy(void)
+void Session::release(void)
 {
   if (mState == TERMINATED)
     mState = RELEASED;
