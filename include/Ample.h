@@ -58,6 +58,11 @@ class MethodGroupObserver;
 class ObjectNode;
 class ObjectNodeObserver;
 
+class BitmapLayer;
+class BitmapLayerObserver;
+class BitmapNode;
+class BitmapNodeObserver;
+
 class Session;
 class SessionObserver;
 
@@ -164,7 +169,7 @@ template <typename T>
 inline void Observer<T>::detachObservables(void)
 {
   while (mObservables.size())
-    mObservables.front()->removeObserver(dynamic_cast<T&>(*this));
+    mObservables.front()->removeObserver(*this);
 }
 
 //---------------------------------------------------------------------
@@ -189,6 +194,10 @@ public:
    *  @param observer The observer to remove.
    */
   inline void removeObserver(T& observer); 
+  /*! Removes the specified observer from this object.
+   *  @param observer The observer to remove.
+   */
+  inline void removeObserver(Observer<T>& observer); 
 private:
   typedef std::vector<T*> ObserverList;
   ObserverList mObservers;
@@ -220,6 +229,18 @@ inline void Observable<T>::removeObserver(T& observer)
   if (i != mObservers.end())
   {
     typename ObserverType::ObservableList& observables = static_cast<ObserverType&>(observer).mObservables;
+    observables.erase(std::find(observables.begin(), observables.end(), this));
+    mObservers.erase(i);
+  }
+}
+
+template <typename T>
+inline void Observable<T>::removeObserver(Observer<T>& observer)
+{
+  typename ObserverList::iterator i = std::find(mObservers.begin(), mObservers.end(), &observer);
+  if (i != mObservers.end())
+  {
+    typename ObserverType::ObservableList& observables = observer.mObservables;
     observables.erase(std::find(observables.begin(), observables.end(), this));
     mObservers.erase(i);
   }
@@ -1124,6 +1145,13 @@ public:
    *  Session::update.
    */
   void destroy(void);
+  /*! Creates a new method in this method group.
+   *  @param name The desired name of the method.
+   *  @param parameters The parameters accepted by the method.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void createMethod(const std::string& name, const MethodParamList& parameters);
   /*! @param methodID The ID of the desired method.
    *  @return The method with the specified ID, or @c NULL if no such method exists.
@@ -1196,23 +1224,44 @@ public:
 
 //---------------------------------------------------------------------
 
+/* Node link class. Represents a single link between an object node and another node.
+ */
 class Link
 {
 public:
+  /*! Destroys this node link.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void destroy(void);
-  VNodeID getNodeID(void) const;
+  /*! @return The ID of this node link.
+   */
   uint16 getID(void) const;
+  /*! @return The ID of the node that this node link points to.
+   */
+  VNodeID getLinkedNodeID(void) const;
+  /*! @return The ID of who knows.
+   */
+  VNodeID getTargetNodeID(void) const;
+  /*! @return The name of this node.
+   */
   const std::string& getName(void) const;
+  /*! @return The node containing this node link.
+   */
   ObjectNode& getNode(void) const;
 private:
   Link(uint16 ID, ObjectNode& node);
   VNodeID mNodeID;
+  VNodeID mTargetID;
   uint16 mID;
   std::string mName;
   ObjectNode& mNode;
 };
 
 //---------------------------------------------------------------------
+
+// NOTE: Not finished.
 
 struct Translation
 {
@@ -1227,6 +1276,8 @@ struct Translation
 
 //---------------------------------------------------------------------
 
+// NOTE: Not finished.
+
 struct Rotation
 {
   Quaternion64 mRotation;
@@ -1239,6 +1290,8 @@ struct Rotation
 };
 
 //---------------------------------------------------------------------
+
+// NOTE: Not finished.
 
 /*! Object node class. Represents a single object node.
  */
@@ -1319,14 +1372,23 @@ public:
   /*! @return The translation properties of this object node.
    */
   const Translation& getTranslation(void) const;
+  /*! Changes the translation properties of this object node.
+   *  @param translation The desired translation properties.
+   */
   void setTranslation(const Translation& translation);
   /*! @return The rotation properties of this object node.
    */
   const Rotation& getRotation(void) const;
+  /*! Changes the rotation properties of this object node.
+   *  @param rotation The desired rotation properties.
+   */
   void setRotation(const Rotation& rotation);
-  /*! @return The scale of this object node.
+  /*! @return The scaling of this object node.
    */
   const Vector3d& getScale(void) const;
+  /*! Changes the scaling of this object node.
+   *  @param scale The desired scaling.
+   */
   void setScale(const Vector3d& scale);
 private:
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
@@ -1341,6 +1403,8 @@ private:
 };
 
 //---------------------------------------------------------------------
+
+// NOTE: Not finished.
 
 /*! Observer interface for object nodes.
  */
@@ -1357,6 +1421,67 @@ public:
    *  @param group The method group to be destroyed.
    */
   virtual void onDestroyMethodGroup(ObjectNode& node, MethodGroup& group);
+};
+
+//---------------------------------------------------------------------
+
+class BitmapLayer : public Observable<BitmapLayerObserver>
+{
+};
+
+//---------------------------------------------------------------------
+
+class BitmapLayerObserver : public Observer<BitmapLayerObserver>
+{
+};
+
+//---------------------------------------------------------------------
+
+// NOTE: Not finished.
+
+class BitmapNode : public Node
+{
+  friend class Session;
+public:
+  void destroy(void);
+  /*! @param ID The ID of the desired bitmap layer.
+   *  @return The bitmap layer with the specified ID, or @c NULL if no such bitmap layer exists.
+   */
+  BitmapLayer* getLayerByID(VLayerID ID);
+  /*! @param ID The ID of the desired bitmap layer.
+   *  @return The bitmap layer with the specified ID, or @c NULL if no such bitmap layer exists.
+   */
+  const BitmapLayer* getLayerByID(VLayerID ID) const;
+  /*! @param index The index of the desired bitmap layer.
+   *  @return The bitmap layer at the specified index, or @c NULL if no such bitmap layer exists.
+   */
+  BitmapLayer* getLayerByIndex(unsigned int index);
+  /*! @param index The index of the desired bitmap layer.
+   *  @return The bitmap layer at the specified index, or @c NULL if no such bitmap layer exists.
+   */
+  const BitmapLayer* getLayerByIndex(unsigned int index) const;
+  /*! @param name The name of the desired bitmap layer
+   *  @return The bitmap layer with the specified name, or @c NULL if no such bitmap layer exists.
+   */
+  BitmapLayer* getLayerByName(const std::string& name);
+  /*! @param name The name of the desired bitmap layer
+   *  @return The bitmap layer with the specified name, or @c NULL if no such bitmap layer exists.
+   */
+  const BitmapLayer* getLayerByName(const std::string& name) const;
+  void setDimensions(uint16 width, uint16 height, uint16 depth = 1);
+  uint16 getWidth(void) const;
+  uint16 getHeight(void) const;
+  uint16 getDepth(void) const;
+private:
+  BitmapNode(void);
+};
+
+//---------------------------------------------------------------------
+
+// NOTE: Not finished.
+
+class BitmapNodeObserver : public NodeObserver
+{
 };
 
 //---------------------------------------------------------------------
@@ -1472,6 +1597,8 @@ public:
   /*! @return The active session, or @c NULL if no session is active.
    */
   static Session* getCurrent(void);
+  static Session* getByIndex(unsigned int index);
+  static unsigned int getCount(void);
 private:
   Session(const std::string& address,
           const std::string& username,

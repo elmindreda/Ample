@@ -330,6 +330,18 @@ Session* Session::getCurrent(void)
   return msCurrent;
 }
 
+Session* Session::getByIndex(unsigned int index)
+{
+  SessionList::iterator i = msSessions.begin();
+  std::advance(i, index);
+  return *i;
+}
+
+unsigned int Session::getCount(void)
+{
+  return msSessions.size();
+}
+
 Session::Session(const std::string& address, const std::string& username, VSession internal):
   mAddress(address),
   mUserName(username),
