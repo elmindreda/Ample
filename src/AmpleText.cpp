@@ -73,6 +73,33 @@ TextBuffer::TextBuffer(VBufferID ID, const std::string& name, TextNode& node):
 {
 }
 
+void TextBuffer::initialize(void)
+{
+  verse_callback_set((void*) verse_send_t_text_set,
+                     (void*) receiveTextBufferSet,
+                     NULL);
+}
+
+void TextBuffer::receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID, uint32 position, uint32 length, const char* text)
+{
+  Session* session = Session::getCurrent();
+
+  TextNode* node = dynamic_cast<TextNode*>(session->getNodeByID(ID));
+  if (!node)
+    return;
+
+  TextBuffer* buffer = node->getBufferByID(bufferID);
+  if (!buffer)
+    return;
+
+  const TextBuffer::ObserverList& observers = buffer->getObservers();
+  for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onReplaceRange(*buffer, position, length, text);
+
+  buffer->mText.replace(position, length, text);
+  buffer->updateData();
+}
+
 //---------------------------------------------------------------------
 
 void TextBufferObserver::onReplaceRange(TextBuffer& buffer, uint32 position, uint32 length, const std::string& text)
@@ -168,6 +195,112 @@ TextNode::~TextNode(void)
 {
   for (BufferList::iterator i = mBuffers.begin();  i != mBuffers.end();  i++)
     delete *i;
+}
+
+void TextNode::initialize(void)
+{
+  TextBuffer::initialize();
+
+  verse_callback_set((void*) verse_send_t_set_language,
+                     (void*) receiveNodeLanguageSet,
+                     NULL);
+  verse_callback_set((void*) verse_send_t_buffer_create,
+                     (void*) receiveTextBufferCreate,
+                     NULL);
+  verse_callback_set((void*) verse_send_t_buffer_destroy,
+                     (void*) receiveTextBufferDestroy,
+                     NULL);
+}
+
+void TextNode::receiveNodeLanguageSet(void* user, VNodeID ID, const char* language)
+{
+  Session* session = Session::getCurrent();
+
+  TextNode* node = dynamic_cast<TextNode*>(session->getNodeByID(ID));
+  if (!node)
+    return;
+
+  const Node::ObserverList& observers = node->getObservers();
+  for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+  {
+    if (TextNodeObserver* observer = dynamic_cast<TextNodeObserver*>(*i))
+      observer->onSetLanguage(*node, language);
+  }
+  
+  node->mLanguage = language;
+  node->updateData();
+}
+
+void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name)
+{
+  Session* session = Session::getCurrent();
+
+  TextNode* node = dynamic_cast<TextNode*>(session->getNodeByID(ID));
+  if (!node)
+    return;
+
+  TextBuffer* buffer = node->getBufferByID(bufferID);
+  if (buffer)
+  {
+    const TextBuffer::ObserverList& observers = buffer->getObservers();
+    for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetName(*buffer, name);
+    
+    buffer->mName = name;
+    buffer->updateData();
+  }
+  else
+  {
+    buffer = new TextBuffer(bufferID, name, *node);
+    node->mBuffers.push_back(buffer);
+    node->updateStructure();
+
+    const Node::ObserverList& observers = node->getObservers();
+    for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (TextNodeObserver* observer = dynamic_cast<TextNodeObserver*>(*i))
+	observer->onCreateBuffer(*node, *buffer);
+    }
+  
+    verse_send_t_buffer_subscribe(node->getID(), bufferID);
+  }
+}
+
+void TextNode::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferID)
+{
+  Session* session = Session::getCurrent();
+
+  TextNode* node = dynamic_cast<TextNode*>(session->getNodeByID(ID));
+  if (!node)
+    return;
+
+  TextNode::BufferList& buffers = node->mBuffers;
+  for (TextNode::BufferList::iterator buffer = buffers.begin();  buffer != buffers.end();  buffer++)
+  {
+    if ((*buffer)->getID() == bufferID)
+    {
+      // Notify text buffer observers.
+      {
+        const TextBuffer::ObserverList& observers = (*buffer)->getObservers();
+        for (TextBuffer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*buffer));
+      }
+
+      // Notify text node observers.
+      const TextNode::ObserverList& observers = node->getObservers();
+      for (TextNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      {
+	if (TextNodeObserver* observer = dynamic_cast<TextNodeObserver*>(*i))
+	  observer->onDestroyBuffer(*node, *(*buffer));
+      }
+
+      delete *buffer;
+      buffers.erase(buffer);
+      
+      node->updateStructure();
+      break;
+    }
+  }
 }
 
 //---------------------------------------------------------------------

@@ -209,6 +209,104 @@ TagGroup::~TagGroup(void)
   }
 }
 
+void TagGroup::initialize(void)
+{
+  verse_callback_set((void*) verse_send_tag_create,
+                     (void*) receiveTagCreate,
+                     NULL);
+  verse_callback_set((void*) verse_send_tag_destroy,
+                     (void*) receiveTagDestroy,
+                     NULL);
+}
+
+void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 tagID, const char* name, VNTagType type, const VNTag* value)
+{
+  Session* session = Session::getCurrent();
+
+  Node* node = session->getNodeByID(ID);
+  if (!node)
+    return;
+
+  TagGroup* group = node->getTagGroupByID(groupID);
+  if (!group)
+    return;
+
+  Tag* tag = group->getTagByID(tagID);
+  if (tag)
+  {
+    if (tag->mName != name)
+    {
+      // TODO: Notify name change.
+    }
+
+    if (tag->mType != type)
+    {
+      // TODO: Notify type change.
+    }
+
+    // TODO: Compare values.
+
+    const Tag::ObserverList& observers = tag->getObservers();
+    for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onChange(*tag);
+    
+    tag->mName = name;
+    tag->mType = type;
+    tag->mValue = *value;
+    tag->updateData();
+  }
+  else
+  {
+    tag = new Tag(tagID, name, type, *value, *group);
+    group->mTags.push_back(tag);
+    group->updateStructure();
+
+    const TagGroup::ObserverList& observers = group->getObservers();
+    for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onCreateTag(*group, *tag);
+  }
+}
+
+void TagGroup::receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 tagID)
+{
+  Session* session = Session::getCurrent();
+
+  Node* node = session->getNodeByID(ID);
+  if (!node)
+    return;
+
+  TagGroup* group = node->getTagGroupByID(groupID);
+  if (!group)
+    return;
+
+  TagGroup::TagList& tags = group->mTags;
+  for (TagGroup::TagList::iterator tag = tags.begin();  tag != tags.end();  tag++)
+  {
+    if ((*tag)->getID() == tagID)
+    {
+      // Notify tag observers.
+      {
+        const Tag::ObserverList& observers = (*tag)->getObservers();
+        for (Tag::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*tag));
+      }
+
+      // Notify tag group observers.
+      {
+        const TagGroup::ObserverList& observers = group->getObservers();
+        for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroyTag(*group, *(*tag));
+      }
+
+      delete *tag;
+      tags.erase(tag);
+
+      group->updateStructure();
+      break;
+    }
+  }
+}
+
 //---------------------------------------------------------------------
 
 void TagGroupObserver::onCreateTag(TagGroup& group, Tag& tag)

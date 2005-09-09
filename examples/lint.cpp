@@ -5,66 +5,83 @@
 
 using namespace verse::ample;
 
-class Listener : public SessionObserver,
-		 //public TextNodeObserver,
-		 public TextBufferObserver,
-		 public GeometryNodeObserver,
-		 public GeometryLayerObserver,
-		 public TagGroupObserver,
-		 public TagObserver
+class NodeListener : public TagObserver, public TagGroupObserver, public NodeObserver
 {
-public:
-  void onAccept(Session& session)
+  void onChange(Tag& tag)
   {
-    printf("Accepted session %s\n", session.getAddress().c_str());
-
-    /*
-    session.createNode("text", V_NT_TEXT);
-    session.createNode("geometry", V_NT_GEOMETRY);
-    */
+    printf("Changed something in tag %s(%u) in group %s(%u) of node %u (%s)\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   tag.getGroup().getName().c_str(),
+           tag.getGroup().getID(),
+	   tag.getGroup().getNode().getID(),
+	   tag.getGroup().getNode().getName().c_str());
   }
 
-  void onTerminate(Session& session, const std::string& byebye)
+  void onSetName(Tag& tag, const std::string name)
   {
-    printf("Terminated session %s with %s\n",
-           session.getAddress().c_str(),
-	   byebye.c_str());
+    printf("Changed name of tag %s(%u) of group %s(%u) node %u (%s) to %s\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   tag.getGroup().getName().c_str(),
+	   tag.getGroup().getID(),
+	   tag.getGroup().getNode().getID(),
+	   tag.getGroup().getNode().getName().c_str(),
+	   name.c_str());
   }
 
-  void onCreateNode(Session& session, Node& node)
+  void onDestroy(Tag& tag)
   {
-    printf("Created node %u of type %u\n", node.getID(), node.getType());
-
-    /*
-    if (node.isMine())
-    {
-      node.createTagGroup("group");
-
-      switch (node.getType())
-      {
-	case V_NT_GEOMETRY:
-	{
-	  GeometryNode* geometryNode = dynamic_cast<GeometryNode*>(&node);
-	  geometryNode->createLayer("layer", VN_G_LAYER_VERTEX_REAL);
-	  break;
-	}
-
-	case V_NT_TEXT:
-	{
-	  TextNode* textNode = dynamic_cast<TextNode*>(&node);
-	  textNode->createBuffer("buffer");
-	  break;
-	}
-      }
-    }
-    */
-
-    node.addObserver(*this);
+    printf("Destroyed tag %s(%u) of group %s(%u) node %u (%s)\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   tag.getGroup().getName().c_str(),
+	   tag.getGroup().getID(),
+	   tag.getGroup().getNode().getID(),
+	   tag.getGroup().getNode().getName().c_str());
   }
 
-  void onDestroyNode(Session& session, Node& node)
+  void onCreateTag(TagGroup& group, Tag& tag)
   {
-    printf("Destroyed node %u (%s)\n", node.getID(), node.getName().c_str());
+    printf("Created tag %s(%u) in group %s(%u) of node %u (%s)\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
+
+    tag.addObserver(*this);
+  }
+
+  void onDestroyTag(TagGroup& group, Tag& tag)
+  {
+    printf("Destroyed tag %s(%u) in group %s(%u) of node %u (%s)\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
+  }
+
+  void onSetName(TagGroup& group, const std::string& name)
+  {
+    printf("Changed name of group %s(%u) of node %u (%s) to %s\n",
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str(),
+	   name.c_str());
+  }
+
+  void onDestroy(TagGroup& group)
+  {
+    printf("Destroyed tag group %s(%u) node %u (%s)\n",
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
   }
 
   void onCreateTagGroup(Node& node, TagGroup& group)
@@ -76,15 +93,6 @@ public:
 	   node.getName().c_str());
 
     group.addObserver(*this);
-
-    /*
-    if (group.getNode().isMine())
-    {
-      VNTag value;
-      value.vboolean = true;
-      group.createTag("tag", VN_TAG_BOOLEAN, value);
-    }
-    */
   }
 
   void onDestroyTagGroup(Node& node, TagGroup& group)
@@ -98,94 +106,91 @@ public:
 
   void onSetName(Node& node, const std::string& name)
   {
-    printf("Set name %s for node %u\n", name.c_str(), node.getID());
+    printf("Set name %s for node %u (%s)\n",
+           name.c_str(),
+           node.getID(),
+           node.getName().c_str());
   }
 
-  void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
+  void onDestroy(Node& node)
   {
-    printf("Created vertex %u in node %u(%s)\n",
-           vertexID,
-	   node.getID(),
-	   node.getName().c_str());
-
-    BaseMesh mesh;
-    node.getBaseMesh(mesh);
-    printf("Base mesh has %u polygons and %u vertices\n", mesh.mPolygons.size(), mesh.mVertices.size());
-  }
-  
-  void onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
-  {
-    printf("Changed vertex %u in node %u(%s)\n",
-           vertexID,
+    printf("Destroyed node %u (%s)\n",
 	   node.getID(),
 	   node.getName().c_str());
   }
+};
 
-  void onDeleteVertex(GeometryNode& node, uint32 vertexID)
-  {
-    printf("Deleted vertex %u in node %u(%s)\n",
-           vertexID,
-	   node.getID(),
-	   node.getName().c_str());
-  }
-  
-  void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
-  {
-    printf("Created polygon %u in node %u(%s)\n",
-           polygonID,
-	   node.getID(),
-	   node.getName().c_str());
+NodeListener nodeListener;
 
-    BaseMesh mesh;
-    node.getBaseMesh(mesh);
-    printf("Base mesh has %u polygons and %u vertices\n", mesh.mPolygons.size(), mesh.mVertices.size());
-  }
-  
-  void onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+class TextListener : public TextBufferObserver, public TextNodeObserver
+{
+  void onReplaceRange(TextBuffer& buffer, uint32 position, uint32 length, const std::string& text)
   {
-    printf("Changed polygon %u in node %u(%s)\n",
-           polygonID,
-	   node.getID(),
-	   node.getName().c_str());
+    printf("Replaced range [%u, %u) in text buffer %s(%u) in text node %u (%s) with %s\n",
+           position,
+           position + length,
+           buffer.getName().c_str(),
+           buffer.getID(),
+           buffer.getNode().getID(),
+           buffer.getNode().getName().c_str(),
+           text.c_str());
   }
 
-  void onDeletePolygon(GeometryNode& node, uint32 polygonID)
+  void onSetName(TextBuffer& buffer, const std::string& name)
   {
-    printf("Deleted polygon %u in node %u(%s)\n",
-           polygonID,
-	   node.getID(),
-	   node.getName().c_str());
+    printf("Changed name of text buffer %s(%u) of text node %u (%s) to %s\n",
+	   buffer.getName().c_str(),
+	   buffer.getID(),
+	   buffer.getNode().getID(),
+	   buffer.getNode().getName().c_str(),
+	   name.c_str());
   }
 
-  void onCreateLayer(GeometryNode& node, GeometryLayer& layer)
+  void onDestroy(TextBuffer& buffer)
   {
-    printf("Created geometry layer %s(%u) of type %u in node %u (%s)\n",
-           layer.getName().c_str(),
-	   layer.getID(),
-	   layer.getType(),
+    printf("Destroyed text buffer %s(%u) in text node %u (%s)\n",
+	   buffer.getName().c_str(),
+	   buffer.getID(),
+	   buffer.getNode().getID(),
+	   buffer.getNode().getName().c_str());
+  }
+
+  void onCreateBuffer(TextNode& node, TextBuffer& buffer)
+  {
+    printf("Created text buffer %s(%u) in text node %u (%s)\n",
+           buffer.getName().c_str(),
+	   buffer.getID(),
 	   node.getID(),
 	   node.getName().c_str());
 
-    /*
-    if (node.isMine())
-      layer.setName("renamed_layer");
-    */
-    
-    layer.addObserver(*this);
+    buffer.addObserver(*this);
   }
 
-  void onDestroyLayer(GeometryNode& node, GeometryLayer& layer)
+  void onDestroyBuffer(TextNode& node, TextBuffer& buffer)
   {
-    printf("Destroyed geometry layer %s(%u) of in node %u (%s)\n",
-           layer.getName().c_str(),
-	   layer.getID(),
+    printf("Destroyed text buffer %s(%u) in text node %u (%s)\n",
+           buffer.getName().c_str(),
+	   buffer.getID(),
 	   node.getID(),
 	   node.getName().c_str());
   }
 
+  void onSetLanguage(TextNode& node, const std::string& language)
+  {
+    printf("Set language of text node %u (%s) to %s\n",
+           node.getID(),
+           node.getName().c_str(),
+           language.c_str());
+  }
+};
+
+TextListener textListener;
+
+class GeometryListener : public GeometryLayerObserver, public GeometryNodeObserver
+{
   void onSetSlot(GeometryLayer& layer, uint32 slotID, const void* data)
   {
-    printf("Changed slot %u in layer %s(%u) of node %u (%s)\n",
+    printf("Changed slot %u in layer %s(%u) of geometry node %u (%s)\n",
            slotID,
 	   layer.getName().c_str(),
 	   layer.getID(),
@@ -195,7 +200,7 @@ public:
   
   void onSetName(GeometryLayer& layer, const std::string& name)
   {
-    printf("Changed name of layer %s(%u) to %s in node %u (%s)\n",
+    printf("Changed name of layer %s(%u) to %s in geometry node %u (%s)\n",
            layer.getName().c_str(),
 	   layer.getID(),
 	   name.c_str(),
@@ -203,51 +208,131 @@ public:
 	   layer.getNode().getName().c_str());
   }
 
-  void onCreateTag(TagGroup& group, Tag& tag)
+  void onDestroy(GeometryLayer& layer)
   {
-    printf("Created tag %s in group %s(%u) of node %u (%s)\n",
-           tag.getName().c_str(),
-	   group.getName().c_str(),
-	   group.getID(),
-	   group.getNode().getID(),
-	   group.getNode().getName().c_str());
-
-    tag.addObserver(*this);
-
-    /*
-    tag.setName("renamed_tag");
-    */
+    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s)\n",
+           layer.getName().c_str(),
+	   layer.getID(),
+	   layer.getNode().getID(),
+	   layer.getNode().getName().c_str());
   }
 
-  void onDestroyTag(TagGroup& group, Tag& tag)
+  void onCreateVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
   {
-    printf("Destroyed tag %s in group %s(%u) of node %u (%s)\n",
-           tag.getName().c_str(),
-	   group.getName().c_str(),
-	   group.getID(),
-	   group.getNode().getID(),
-	   group.getNode().getName().c_str());
+    printf("Created vertex %u in geometry node %u(%s)\n",
+           vertexID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+  
+  void onChangeBaseVertex(GeometryNode& node, uint32 vertexID, const BaseVertex& vertex)
+  {
+    printf("Changed vertex %u in geometry node %u(%s)\n",
+           vertexID,
+	   node.getID(),
+	   node.getName().c_str());
   }
 
-  void onSetName(TagGroup& group, const std::string& name)
+  void onDeleteVertex(GeometryNode& node, uint32 vertexID)
   {
-    printf("Changed name of group %s(%u) to %s of node %u (%s)\n",
-	   group.getName().c_str(),
-	   group.getID(),
-	   name.c_str(),
-	   group.getNode().getID(),
-	   group.getNode().getName().c_str());
+    printf("Deleted vertex %u in geometry node %u(%s)\n",
+           vertexID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+  
+  void onCreatePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+  {
+    printf("Created polygon %u in geometry node %u(%s)\n",
+           polygonID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+  
+  void onChangeBasePolygon(GeometryNode& node, uint32 polygonID, const BasePolygon& polygon)
+  {
+    printf("Changed polygon %u in geometry node %u(%s)\n",
+           polygonID,
+	   node.getID(),
+	   node.getName().c_str());
   }
 
-  void onChange(Tag& tag)
+  void onDeletePolygon(GeometryNode& node, uint32 polygonID)
   {
-    printf("Changed something in tag %s in group %s of node %u (%s)\n",
-           tag.getName().c_str(),
-	   tag.getGroup().getName().c_str(),
-	   tag.getGroup().getNode().getID(),
-	   tag.getGroup().getNode().getName().c_str());
+    printf("Deleted polygon %u in geometry node %u(%s)\n",
+           polygonID,
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onCreateLayer(GeometryNode& node, GeometryLayer& layer)
+  {
+    printf("Created geometry layer %s(%u) of type %u in geometry node %u (%s)\n",
+           layer.getName().c_str(),
+	   layer.getID(),
+	   layer.getType(),
+	   node.getID(),
+	   node.getName().c_str());
+
+    layer.addObserver(*this);
+  }
+
+  void onDestroyLayer(GeometryNode& node, GeometryLayer& layer)
+  {
+    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s)\n",
+           layer.getName().c_str(),
+	   layer.getID(),
+	   node.getID(),
+	   node.getName().c_str());
   }
 };
+
+GeometryListener geometryListener;
+
+class SessionListener : public SessionObserver
+{
+public:
+  void onAccept(Session& session)
+  {
+    printf("Accepted session %s\n", session.getAddress().c_str());
+  }
+
+  void onTerminate(Session& session, const std::string& byebye)
+  {
+    printf("Terminated session %s with %s\n",
+           session.getAddress().c_str(),
+	   byebye.c_str());
+  }
+
+  void onCreateNode(Session& session, Node& node)
+  {
+    printf("Created node %u of type %u\n", node.getID(), node.getType());
+
+    node.addObserver(nodeListener);
+
+    switch (node.getType())
+    {
+      case V_NT_GEOMETRY:
+      {
+        node.addObserver(geometryListener);
+        break;
+      }
+
+      case V_NT_TEXT:
+      {
+        node.addObserver(textListener);
+        break;
+      }
+    }
+  }
+
+  void onDestroyNode(Session& session, Node& node)
+  {
+    printf("Destroyed node %u (%s)\n", node.getID(), node.getName().c_str());
+  }
+};
+
+SessionListener sessionListener;
 
 int main(int argc, char** argv)
 {
@@ -262,8 +347,7 @@ int main(int argc, char** argv)
   if (!session)
     return 1;
 
-  Listener listener;
-  session->addObserver(listener);
+  session->addObserver(sessionListener);
 
   while (session->getState() != Session::TERMINATED)
     Session::update(10000);

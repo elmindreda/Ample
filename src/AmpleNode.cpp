@@ -124,6 +124,105 @@ Node::~Node(void)
   }
 }
 
+void Node::initialize(void)
+{
+  TagGroup::initialize();
+
+  verse_callback_set((void*) verse_send_node_name_set,
+                     (void*) receiveNodeNameSet,
+                     NULL);
+  verse_callback_set((void*) verse_send_tag_group_create,
+                     (void*) receiveTagGroupCreate,
+                     NULL);
+  verse_callback_set((void*) verse_send_tag_group_destroy,
+                     (void*) receiveTagGroupDestroy,
+                     NULL);
+}
+
+void Node::receiveNodeNameSet(void* user, VNodeID ID, const char* name)
+{
+  Session* session = Session::getCurrent();
+
+  Node* node = session->getNodeByID(ID);
+  if (!node)
+    return;
+  
+  const Node::ObserverList& observers = node->getObservers();
+  for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onSetName(*node, name);
+  
+  node->mName = name;
+  node->updateData();
+}
+
+void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const char* name)
+{
+  Session* session = Session::getCurrent();
+
+  Node* node = session->getNodeByID(ID);
+  if (!node)
+    return;
+
+  TagGroup* group = node->getTagGroupByID(groupID);
+  if (group)
+  {
+    const TagGroup::ObserverList& observers = group->getObservers();
+    for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetName(*group, name);
+      
+    group->mName = name;
+    group->updateData();
+  }
+  else
+  {
+    group = new TagGroup(groupID, name, *node);
+    node->mGroups.push_back(group);
+    node->updateStructure();
+    
+    const Node::ObserverList& observers = node->getObservers();
+    for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onCreateTagGroup(*node, *group);
+    
+    verse_send_tag_group_subscribe(node->getID(), groupID);
+  }
+}
+
+void Node::receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID)
+{
+  Session* session = Session::getCurrent();
+
+  Node* node = session->getNodeByID(ID);
+  if (!node)
+    return;
+
+  Node::TagGroupList& groups = node->mGroups;
+  for (Node::TagGroupList::iterator group = groups.begin();  group != groups.end();  group++)
+  {
+    if ((*group)->getID() == groupID)
+    {
+      // Notify tag group observers.
+      {
+        const TagGroup::ObserverList& observers = (*group)->getObservers();
+        for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*group));
+      }
+      
+      // Notify node observers.
+      {
+        const Node::ObserverList& observers = node->getObservers();
+        for (Node::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroyTagGroup(*node, *(*group));
+      }
+      
+      delete *group;
+      groups.erase(group);
+
+      node->updateStructure();
+      break;
+    }
+  }
+}
+
 //---------------------------------------------------------------------
 
 void NodeObserver::onCreateTagGroup(Node& node, TagGroup& group)

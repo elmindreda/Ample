@@ -137,6 +137,43 @@ void MethodGroupObserver::onDestroy(MethodGroup& group)
 
 //---------------------------------------------------------------------
 
+void Link::destroy(void)
+{
+}
+
+uint16 Link::getID(void) const
+{
+  return mID;
+}
+
+VNodeID Link::getLinkedNodeID(void) const
+{
+  return mNodeID;
+}
+
+VNodeID Link::getTargetNodeID(void) const
+{
+  return mTargetID;
+}
+
+const std::string& Link::getName(void) const
+{
+  return mName;
+}
+
+ObjectNode& Link::getNode(void) const
+{
+  return mNode;
+}
+
+Link::Link(uint16 ID, ObjectNode& node):
+  mID(ID),
+  mNode(node)
+{
+}
+
+//---------------------------------------------------------------------
+
 void ObjectNode::createMethodGroup(const std::string& name)
 {
   getSession().push();
@@ -244,34 +281,6 @@ const Link* ObjectNode::getLinkByName(const std::string& name) const
 unsigned int ObjectNode::getLinkCount(void) const
 {
   return mLinks.size();
-}
-
-const Translation& ObjectNode::getTranslation(void) const
-{
-  return mTranslation;
-}
-
-void ObjectNode::setTranslation(const Translation& translation)
-{
-  getSession().push();
-  verse_send_o_transform_pos_real64(getID(),
-                                    translation.mSeconds,
-                                    translation.mFraction,
-                                    translation.mPosition,
-                                    translation.mSpeed,
-                                    translation.mAccel, 
-                                    translation.mDragNormal,
-                                    translation.mDrag);
-  getSession().pop();
-}
-
-const Rotation& ObjectNode::getRotation(void) const
-{
-  return mRotation;
-}
-
-void ObjectNode::setRotation(const Rotation& rotation)
-{
 }
 
 const Vector3d& ObjectNode::getScale(void) const

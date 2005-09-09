@@ -179,9 +179,9 @@ inline void Observer<T>::detachObservables(void)
 template <typename T>
 class Observable
 {
-  friend class Session;
 public:
   typedef Observer<T> ObserverType;
+  typedef std::vector<T*> ObserverList;
   /*! Destructor. Detaches all attached observers.
    */
   inline virtual ~Observable(void);
@@ -198,8 +198,10 @@ public:
    *  @param observer The observer to remove.
    */
   inline void removeObserver(Observer<T>& observer); 
+  /*! @return The list of observers attached to this object.
+   */
+  inline const ObserverList& getObservers(void) const;
 private:
-  typedef std::vector<T*> ObserverList;
   ObserverList mObservers;
 };
 
@@ -246,12 +248,24 @@ inline void Observable<T>::removeObserver(Observer<T>& observer)
   }
 }
 
+template <typename T>
+inline const typename Observable<T>::ObserverList& Observable<T>::getObservers(void) const
+{
+  return mObservers;
+}
+
 //---------------------------------------------------------------------
 
 /*! Base class for versioned objects.
  */
 class Versioned
 {
+  friend class TagGroup;
+  friend class Node;
+  friend class TextBuffer;
+  friend class TextNode;
+  friend class GeometryLayer;
+  friend class GeometryNode;
   friend class Session;
 public:
   /*! Constructor.
@@ -278,7 +292,6 @@ private:
  */
 class Tag : public Versioned, public Observable<TagObserver>
 {
-  friend class Session;
   friend class TagGroup;
 public:
   /*! Destroys this tag.
@@ -363,7 +376,6 @@ public:
  */
 class TagGroup : public Versioned, public Observable<TagGroupObserver>
 {
-  friend class Session;
   friend class Node;
 public:
   /*! Destroys this tag group.
@@ -427,6 +439,9 @@ public:
 private:
   TagGroup(uint16 ID, const std::string& name, Node& node);
   ~TagGroup(void);
+  static void initialize(void);
+  static void receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 tagID, const char* name, VNTagType type, const VNTag* value);
+  static void receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 tagID);
   typedef std::vector<Tag*> TagList;
   TagList mTags;
   std::string mName;
@@ -545,6 +560,10 @@ protected:
    */
   virtual ~Node(void);
 private:
+  static void initialize(void);
+  static void receiveNodeNameSet(void* user, VNodeID ID, const char *name);
+  static void receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const char* name);
+  static void receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID);
   typedef std::vector<TagGroup*> TagGroupList;
   VNodeID mID;
   VNodeType mType;
@@ -645,6 +664,8 @@ public:
   TextNode& getNode(void) const;
 private:
   TextBuffer(VBufferID ID, const std::string& name, TextNode& node);
+  static void initialize(void);
+  static void receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID, uint32 position, uint32 length, const char* text);
   VBufferID mID;
   std::string mName;
   std::string mText;
@@ -731,6 +752,10 @@ public:
 private:
   TextNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~TextNode(void);
+  static void initialize(void);
+  static void receiveNodeLanguageSet(void* user, VNodeID ID, const char* language);
+  static void receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name);
+  static void receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferID);
   typedef std::vector<TextBuffer*> BufferList;
   BufferList mBuffers;
   std::string mLanguage;
@@ -766,7 +791,6 @@ public:
  */
 class GeometryLayer : public Versioned, public Observable<GeometryLayerObserver>
 {
-  friend class Session;
   friend class GeometryNode;
 public:
   /*! Geometry stack enumeration.
@@ -838,6 +862,22 @@ private:
   GeometryLayer(VLayerID ID, const std::string& name, VNGLayerType type,
 		GeometryNode& node, uint32 defaultInt, real64 defaultReal);
   void reserve(size_t slotCount);
+  static void initialize(void);
+  static void receiveVertexSetXyzReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 x, real32 y, real32 z);
+  static void receiveVertexDeleteReal32(void* user, VNodeID nodeID, uint32 vertexID);
+  static void receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 x, real64 y, real64 z);
+  static void receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 vertexID);
+  static void receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, uint32 value);
+  static void receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 value);
+  static void receiveVertexSetReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 value);
+  static void receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 v0, uint32 v1, uint32 v2, uint32 v3);
+  static void receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID);
+  static void receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 v0, real64 v1, real64 v2, real64 v3);
+  static void receivePolygonSetCornerReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 v0, real32 v1, real32 v2, real32 v3);
+  static void receivePolygonSetFaceUint8(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint8 value);
+  static void receivePolygonSetFaceUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 value);
+  static void receivePolygonSetFaceReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 value);
+  static void receivePolygonSetFaceReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 value);
   static unsigned int getTypeSize(VNGLayerType type);
   static unsigned int getTypeElementCount(VNGLayerType type);
   Block mData;
@@ -881,6 +921,7 @@ public:
  */
 class GeometryNode : public Node
 {
+  friend class GeometryLayer;
   friend class Session;
 public:
   /*! Creates a geometry layer in this node.
@@ -896,6 +937,9 @@ public:
                    VNGLayerType type,
 		   uint32 defaultInt = 0,
 		   real64 defaultReal = 0.0);
+  /*! @return The base mesh; i.e. all currently complete base layer polygons and their base layer vertices.
+   *  @remarks This method is intended to make geometry extraction easier.
+   */
   bool getBaseMesh(BaseMesh& mesh);
   /*! @param ID The ID of the desired geometry layer.
    *  @return The geometry layer with the specified ID, or @c NULL if no such geometry layer exists.
@@ -975,9 +1019,21 @@ public:
   /*! @return The size, in bytes, of all the geometry layer slots that make up a single polygon.
    */
   size_t getPolygonSize(void) const;
+  /*! @return The geometry layer containing vertex crease data, or
+   *  @c NULL if no such layer exists.
+   */
   GeometryLayer* getVertexCreaseLayer(void);
+  /*! @return The name of the geometry layer containing vertex crease
+   *  data, or the empty string if no name is set.
+   */
   const std::string& getVertexCreaseLayerName(void) const;
+  /*! @return The geometry layer containing edge crease data, or
+   *  @c NULL if no such layer exists.
+   */
   GeometryLayer* getEdgeCreaseLayer(void);
+  /*! @return The name of the geometry layer containing edge crease
+   *  data, or the empty string if no name is set.
+   */
   const std::string& getEdgeCreaseLayerName(void) const;
   uint32 getHighestVertexID(void) const;
   uint32 getHighestPolygonID(void) const;
@@ -986,6 +1042,13 @@ public:
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~GeometryNode(void);
+  static void initialize(void);
+  static void receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerID, const char* name, VNGLayerType type, uint32 defaultInt, real64 defaultReal);
+  static void receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layerID);
+  static void receiveCreaseSetVertex(void* user, VNodeID nodeID, const char *layer, uint32 def_crease);
+  static void receiveCreaseSetEdge(void* user, VNodeID nodeID, const char *layer, uint32 def_crease);
+  static void receiveBoneCreate(void* user, VNodeID nodeID, uint16 bone_id, const char *weight, const char *reference, uint32 parent, real64 pos_x, real64 pos_y, real64 pos_z, real64 rot_x, real64 rot_y, real64 rot_z, real64 rot_w);
+  static void receiveBoneDestroy(void* user, VNodeID nodeID, uint16 bone_id);
   typedef std::vector<bool> ValidityMap;
   typedef std::vector<GeometryLayer*> LayerList;
   typedef std::map<uint32,uint32> VertexIndexMap;
@@ -1263,36 +1326,6 @@ private:
 
 // NOTE: Not finished.
 
-struct Translation
-{
-  Vector3d mPosition;
-  Vector3d mAccel;
-  Vector3d mSpeed;
-  Vector3d mDragNormal;
-  uint32 mSeconds;
-  uint32 mFraction;
-  real64 mDrag; 
-};
-
-//---------------------------------------------------------------------
-
-// NOTE: Not finished.
-
-struct Rotation
-{
-  Quaternion64 mRotation;
-  Quaternion64 mRotSpeed;
-  Quaternion64 mRotAccel;
-  Quaternion64 mDragNormal;
-  uint32 mSeconds;
-  uint32 mFraction;
-  real64 mDrag;
-};
-
-//---------------------------------------------------------------------
-
-// NOTE: Not finished.
-
 /*! Object node class. Represents a single object node.
  */
 class ObjectNode : public Node
@@ -1369,20 +1402,20 @@ public:
   /*! @return The number of links in this node.
    */
   unsigned int getLinkCount(void) const;
-  /*! @return The translation properties of this object node.
+  /*! @return The current position of this object node.
    */
-  const Translation& getTranslation(void) const;
-  /*! Changes the translation properties of this object node.
-   *  @param translation The desired translation properties.
-   */
-  void setTranslation(const Translation& translation);
-  /*! @return The rotation properties of this object node.
-   */
-  const Rotation& getRotation(void) const;
-  /*! Changes the rotation properties of this object node.
-   *  @param rotation The desired rotation properties.
-   */
-  void setRotation(const Rotation& rotation);
+  const Vector3d& getPosition(void) const;
+  void setPosition(const Vector3d& position);
+  const Vector3d& getSpeed(void) const;
+  void setSpeed(const Vector3d& speed);
+  const Vector3d& getAccel(void) const;
+  void setAccel(const Vector3d& accel);
+  const Quaternion64& getRotation(void) const;
+  void setRotation(const Quaternion64& rotation);
+  const Vector3d& getRotationSpeed(void) const;
+  void setRotationSpeed(const Vector3d& speed);
+  const Vector3d& getRotationAccel(void) const;
+  void setRotationAccel(const Vector3d& accel);
   /*! @return The scaling of this object node.
    */
   const Vector3d& getScale(void) const;
@@ -1391,6 +1424,26 @@ public:
    */
   void setScale(const Vector3d& scale);
 private:
+  struct Translation
+  {
+    Vector3d mPosition;
+    Vector3d mSpeed;
+    Vector3d mAccel;
+    Vector3d mDragNormal;
+    uint32 mSeconds;
+    uint32 mFraction;
+    real64 mDrag; 
+  };
+  struct Rotation
+  {
+    Quaternion64 mRotation;
+    Quaternion64 mRotSpeed;
+    Quaternion64 mRotAccel;
+    Quaternion64 mDragNormal;
+    uint32 mSeconds;
+    uint32 mFraction;
+    real64 mDrag;
+  };
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~ObjectNode(void);
   typedef std::vector<MethodGroup*> MethodGroupList;
@@ -1398,7 +1451,9 @@ private:
   MethodGroupList mGroups;
   LinkList mLinks;
   Translation mTranslation;
+  Translation mTranslationCache;
   Rotation mRotation;
+  Rotation mRotationCache;
   Vector3d mScale;
 };
 
@@ -1425,14 +1480,32 @@ public:
 
 //---------------------------------------------------------------------
 
+// NOTE: Not finished.
+
 class BitmapLayer : public Observable<BitmapLayerObserver>
 {
+  friend class BitmapNode;
+public:
+  void destroy(void);
+  VLayerID getID(void) const;
+  std::string& getName(void) const;
+  BitmapNode& getNode(void) const;
+private:
+  BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node);
+  VLayerID mID;
+  std::string mName;
+  BitmapNode& mNode;
 };
 
 //---------------------------------------------------------------------
 
+// NOTE: Not finished.
+
 class BitmapLayerObserver : public Observer<BitmapLayerObserver>
 {
+public:
+  virtual void onSetName(BitmapLayer& layer, const std::string name);
+  virtual void onDestroy(BitmapLayer& layer);
 };
 
 //---------------------------------------------------------------------
@@ -1474,6 +1547,10 @@ public:
   uint16 getDepth(void) const;
 private:
   BitmapNode(void);
+  static void initialize(void);
+  static void receiveDimensionsSet(void* user, VNodeID nodeID, uint16 width, uint16 height, uint16 depth);
+  static void receiveLayerCreate(void* user, VNodeID nodeID, VLayerID layerID, const char* name, VNBLayerType type);
+  static void receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerID);
 };
 
 //---------------------------------------------------------------------
@@ -1482,6 +1559,9 @@ private:
 
 class BitmapNodeObserver : public NodeObserver
 {
+public:
+  virtual void onCreateLayer(BitmapNode& node, BitmapLayer& layer);
+  virtual void onDestroyLayer(BitmapNode& node, BitmapLayer& layer);
 };
 
 //---------------------------------------------------------------------
@@ -1613,6 +1693,10 @@ private:
           const std::string& username,
 	  VSession internal);
   ~Session(void);
+  static void receiveAccept(void* user, VNodeID avatarID, const char* address, uint8* hostID);
+  static void receiveTerminate(void* user, const char* address, const char* byebye);
+  static void receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwner owner);
+  static void receiveNodeDestroy(void* user, VNodeID ID);
   class PendingNode
   {
   public:
@@ -1636,40 +1720,6 @@ private:
   static SessionStack msStack;
   static Session* msCurrent;
   static bool msInitialized;
-  static void receiveAccept(void* user, VNodeID avatarID, const char* address, uint8* hostID);
-  static void receiveTerminate(void* user, const char* address, const char* byebye);
-  static void receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwner owner);
-  static void receiveNodeDestroy(void* user, VNodeID ID);
-  static void receiveNodeNameSet(void* user, VNodeID ID, const char *name);
-  static void receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const char* name);
-  static void receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID);
-  static void receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 tagID, const char* name, VNTagType type, const VNTag* value);
-  static void receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 tagID);
-  static void receiveNodeLanguageSet(void* user, VNodeID ID, const char* language);
-  static void receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name);
-  static void receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID bufferID);
-  static void receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID, uint32 position, uint32 length, const char* text);
-  static void receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID layerID, const char* name, VNGLayerType type, uint32 defaultInt, real64 defaultReal);
-  static void receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID layerID);
-  static void receiveVertexSetXyzReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 x, real32 y, real32 z);
-  static void receiveVertexDeleteReal32(void* user, VNodeID nodeID, uint32 vertexID);
-  static void receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 x, real64 y, real64 z);
-  static void receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 vertexID);
-  static void receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, uint32 value);
-  static void receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 value);
-  static void receiveVertexSetReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 value);
-  static void receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 v0, uint32 v1, uint32 v2, uint32 v3);
-  static void receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID);
-  static void receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 v0, real64 v1, real64 v2, real64 v3);
-  static void receivePolygonSetCornerReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 v0, real32 v1, real32 v2, real32 v3);
-  static void receivePolygonSetFaceUint8(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint8 value);
-  static void receivePolygonSetFaceUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 value);
-  static void receivePolygonSetFaceReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 value);
-  static void receivePolygonSetFaceReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 value);
-  static void receiveCreaseSetVertex(void* user, VNodeID nodeID, const char *layer, uint32 def_crease);
-  static void receiveCreaseSetEdge(void* user, VNodeID nodeID, const char *layer, uint32 def_crease);
-  static void receiveBoneCreate(void* user, VNodeID nodeID, uint16 bone_id, const char *weight, const char *reference, uint32 parent, real64 pos_x, real64 pos_y, real64 pos_z, real64 rot_x, real64 rot_y, real64 rot_z, real64 rot_w);
-  static void receiveBoneDestroy(void* user, VNodeID nodeID, uint16 bone_id);
 };
 
 //---------------------------------------------------------------------
