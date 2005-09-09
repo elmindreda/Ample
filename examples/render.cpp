@@ -1,12 +1,16 @@
 
-#include <GL/glfw.h>
-
 #include <verse.h>
 #include <Ample.h>
 
 #include <stdio.h>
 
 #include <exception>
+
+#if __APPLE_CC__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
 
 using namespace verse::ample;
 
@@ -68,40 +72,48 @@ void Renderer::onDestroyNode(Session& session, Node& node)
     nodes.remove(geometryNode);
 }
 
+Renderer renderer;
+
+static void update(int value)
+{
+  Session::update(1000);
+  glutPostRedisplay();
+  glutTimerFunc(35, update, 0);
+}
+
+static void display(void)
+{
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  renderer.render();
+  glutSwapBuffers();
+}
+
 int main(int argc, char** argv)
 {
-  if (!glfwInit())
-    return -1;
-
-  if (!glfwOpenWindow(640, 480, 8, 8, 8, 0, 16, 0, GLFW_WINDOW))
-  {
-    glfwTerminate();
-    return -1;
-  }
-
   std::string address;
-
   if (argc > 1)
     address = argv[1];
   else
     address = "localhost";
 
-  glClearColor(0.f, 0.f, 0.f, 1.f);
-
   Session* session = Session::create(address, "render", "secret");
-
-  Renderer renderer;
   session->addObserver(renderer);
 
-  while (glfwGetWindowParam(GLFW_OPENED) == GL_TRUE)
-  {
-    Session::update(10000);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    renderer.render();
-    glfwSwapBuffers();
-  }
+  glutInit(&argc, argv);
 
-  glfwTerminate();
+  glutInitWindowSize(640, 480);
+  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+  glutCreateWindow("Ample renderer");
+  glutDisplayFunc(display);
+  glutTimerFunc(35, update, 0);
+
+  glClearColor(0.f, 0.f, 0.f, 1.f);
+  glFrontFace(GL_CW);
+  glCullFace(GL_BACK);
+  glEnable(GL_CULL_FACE);
+  glEnable(GL_DEPTH_TEST);
+
+  glutMainLoop();
   return 0;
 }
 

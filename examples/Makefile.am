@@ -12,7 +12,7 @@ lint_LDADD = -lample -lverse
 lint_SOURCES = lint.cpp
 
 render_CPPFLAGS = -I@top_srcdir@/include
-render_LDFLAGS = -L@top_srcdir@/src -framework OpenGL -framework AGL -framework Carbon
-render_LDADD = -lample -lverse -lglfw 
+render_LDFLAGS = -L@top_srcdir@/src
+render_LDADD = -lample -lverse
 render_SOURCES = render.cpp
 
