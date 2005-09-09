@@ -1,4 +1,6 @@
 
+// NOTE: YES, THIS IS A GREAT BIG HACK. There.
+
 #include <verse.h>
 #include <Ample.h>
 
