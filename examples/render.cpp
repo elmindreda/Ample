@@ -35,10 +35,7 @@ void Renderer::render(void)
   {
     BaseMesh mesh;
     if ((*i)->getBaseMesh(mesh))
-    {
-      printf("Node %s has %u vertices and %u polygons\n", (*i)->getName().c_str(), mesh.mVertices.size(), mesh.mPolygons.size());
       render(mesh);
-    }
   }
 }
 
