@@ -134,6 +134,7 @@ Session* Session::create(const std::string& address,
     Node::initialize();
     TextNode::initialize();
     GeometryNode::initialize();
+    ObjectNode::initialize();
 
     verse_callback_set((void*) verse_send_connect_accept,
 		       (void*) receiveAccept,

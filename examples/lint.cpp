@@ -32,7 +32,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(Tag& tag)
   {
-    printf("Destroyed tag %s(%u) of group %s(%u) node %u (%s)\n",
+    printf("Destroyed tag %s(%u) of group %s(%u) node %u (%s) (duplicate)\n",
            tag.getName().c_str(),
            tag.getID(),
 	   tag.getGroup().getName().c_str(),
@@ -77,7 +77,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(TagGroup& group)
   {
-    printf("Destroyed tag group %s(%u) node %u (%s)\n",
+    printf("Destroyed tag group %s(%u) node %u (%s) (duplicate)\n",
 	   group.getName().c_str(),
 	   group.getID(),
 	   group.getNode().getID(),
@@ -114,7 +114,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(Node& node)
   {
-    printf("Destroyed node %u (%s)\n",
+    printf("Destroyed node %u (%s) (duplicate)\n",
 	   node.getID(),
 	   node.getName().c_str());
   }
@@ -148,7 +148,7 @@ class TextListener : public TextBufferObserver, public TextNodeObserver
 
   void onDestroy(TextBuffer& buffer)
   {
-    printf("Destroyed text buffer %s(%u) in text node %u (%s)\n",
+    printf("Destroyed text buffer %s(%u) in text node %u (%s) (duplicate)\n",
 	   buffer.getName().c_str(),
 	   buffer.getID(),
 	   buffer.getNode().getID(),
@@ -210,7 +210,7 @@ class GeometryListener : public GeometryLayerObserver, public GeometryNodeObserv
 
   void onDestroy(GeometryLayer& layer)
   {
-    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s)\n",
+    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s) (duplicate)\n",
            layer.getName().c_str(),
 	   layer.getID(),
 	   layer.getNode().getID(),
@@ -279,7 +279,7 @@ class GeometryListener : public GeometryLayerObserver, public GeometryNodeObserv
 
   void onDestroyLayer(GeometryNode& node, GeometryLayer& layer)
   {
-    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s)\n",
+    printf("Destroyed geometry layer %s(%u) in geometry node %u (%s)\n",
            layer.getName().c_str(),
 	   layer.getID(),
 	   node.getID(),
@@ -288,6 +288,121 @@ class GeometryListener : public GeometryLayerObserver, public GeometryNodeObserv
 };
 
 GeometryListener geometryListener;
+
+class ObjectListener : public ObjectNodeObserver,
+                       public LinkObserver,
+                       public MethodGroupObserver,
+                       public MethodObserver
+{
+  void onCreateMethodGroup(ObjectNode& node, MethodGroup& group)
+  {
+    printf("Created method group %s(%u) of in object node %u (%s)\n",
+           group.getName().c_str(),
+	   group.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+
+    group.addObserver(*this);
+  }
+
+  void onDestroyMethodGroup(ObjectNode& node, MethodGroup& group)
+  {
+    printf("Destroyed method group %s(%u) in object node %u (%s)\n",
+           group.getName().c_str(),
+	   group.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onCreateLink(ObjectNode& node, Link& link)
+  {
+    printf("Created link %s(%u) of in object node %u (%s)\n",
+           link.getName().c_str(),
+	   link.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+
+    link.addObserver(*this);
+  }
+
+  void onDestroyLink(ObjectNode& node, Link& link)
+  {
+    printf("Destroyed link %s(%u) in object node %u (%s)\n",
+           link.getName().c_str(),
+	   link.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onDestroy(Link& link)
+  {
+    printf("Destroyed link %s(%u) in object node %u (%s) (duplicate)\n",
+           link.getName().c_str(),
+	   link.getID(),
+	   link.getNode().getID(),
+	   link.getNode().getName().c_str());
+  }
+
+  void onCreateMethod(MethodGroup& group, Method& method)
+  {
+    printf("Created method %s(%u) in method group %s(%u) of node %u (%s)\n",
+           method.getName().c_str(),
+           method.getID(),
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
+
+    method.addObserver(*this);
+  }
+
+  void onDestroyMethod(MethodGroup& group, Method& method)
+  {
+    printf("Destroyed method %s(%u) in method group %s(%u) of object node %u (%s)\n",
+           method.getName().c_str(),
+           method.getID(),
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
+  }
+
+  void onSetName(MethodGroup& group, const std::string& name)
+  {
+    printf("Changed name of method group %s(%u) of object node %u (%s) to %s\n",
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str(),
+	   name.c_str());
+  }
+
+  void onDestroy(MethodGroup& group)
+  {
+    printf("Destroyed method group %s(%u) of object node %u (%s) (duplicate)\n",
+	   group.getName().c_str(),
+	   group.getID(),
+	   group.getNode().getID(),
+	   group.getNode().getName().c_str());
+  }
+
+  void onCall(Method& method, const MethodArgumentList& arguments)
+  {
+  }
+
+  void onDestroy(Method& method)
+  {
+    printf("Destroyed method %s(%u) of method group %s(%u) of object node %u (%s) (duplicate)\n",
+           method.getName().c_str(),
+           method.getID(),
+	   method.getGroup().getName().c_str(),
+	   method.getGroup().getID(),
+	   method.getGroup().getNode().getID(),
+	   method.getGroup().getNode().getName().c_str());
+  }
+};
+
+ObjectListener objectListener;
 
 class SessionListener : public SessionObserver
 {
@@ -321,6 +436,12 @@ public:
       case V_NT_TEXT:
       {
         node.addObserver(textListener);
+        break;
+      }
+
+      case V_NT_OBJECT:
+      {
+        node.addObserver(objectListener);
         break;
       }
     }

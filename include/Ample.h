@@ -55,6 +55,8 @@ class Method;
 class MethodObserver;
 class MethodGroup;
 class MethodGroupObserver;
+class Link;
+class LinkObserver;
 class ObjectNode;
 class ObjectNodeObserver;
 
@@ -266,6 +268,8 @@ class Versioned
   friend class TextNode;
   friend class GeometryLayer;
   friend class GeometryNode;
+  friend class MethodGroup;
+  friend class ObjectNode;
   friend class Session;
 public:
   /*! Constructor.
@@ -1125,6 +1129,7 @@ public:
 struct MethodParam
 {
   MethodParam(const std::string& name, VNOParamType type);
+  size_t getSize(void) const;
   std::string mName;
   VNOParamType mType;
 };
@@ -1143,7 +1148,6 @@ typedef std::vector<VNOParam> MethodArgumentList;
  */
 class Method : public Observable<MethodObserver>
 {
-  friend class Session;
   friend class MethodGroup;
 public:
   /*! Destroys this method.
@@ -1157,7 +1161,7 @@ public:
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
-  void call(const MethodArgumentList& arguments);
+  void call(const MethodArgumentList& arguments, VNodeID senderID = (VNodeID) ~0);
   /*! @return The ID of this object method.
    */
   uint16 getID(void) const;
@@ -1169,6 +1173,8 @@ public:
   MethodGroup& getGroup(void) const;
 private:
   Method(uint16 ID, const std::string& name, MethodGroup& group);
+  static void initialize(void);
+  static void receiveMethodCall(void* user, VNodeID nodeID, uint16 groupID, uint16 methodID, VNodeID senderID, const VNOPackedParams* arguments);
   MethodParamList mParams;
   uint16 mID;
   std::string mName;
@@ -1197,9 +1203,8 @@ public:
 
 /*! Method group class. Represents a single method group in an object node.
  */
-class MethodGroup : public Observable<MethodGroupObserver>
+class MethodGroup : public Versioned, public Observable<MethodGroupObserver>
 {
-  friend class Session;
   friend class ObjectNode;
 public:
   /*! Destroys this method group.
@@ -1255,6 +1260,9 @@ public:
 private:
   MethodGroup(uint16 ID, const std::string& name, ObjectNode& node);
   ~MethodGroup(void);
+  static void initialize(void);
+  static void receiveMethodCreate(void* user, VNodeID nodeID, uint16 groupID, uint16 methodID, const char* name, uint8 paramCount, const VNOParamType* paramTypes, const char** paramNames);
+  static void receiveMethodDestroy(void* user, VNodeID nodeID, uint16 groupID, uint16 methodID);
   typedef std::vector<Method*> MethodList;
   MethodList mMethods;
   uint16 mID;
@@ -1279,6 +1287,11 @@ public:
    *  @param method The object method to be destroyed.
    */
   virtual void onDestroyMethod(MethodGroup& group, Method& method);
+  /*! Called before an observed method group has its name changed.
+   *  @param group The observed method group.
+   *  @param name The new name of the method group.
+   */
+  virtual void onSetName(MethodGroup& group, const std::string& name);
   /*! Called before an observed method group is destroyed.
    *  @param group The method group to be destroyed.
    */
@@ -1289,8 +1302,9 @@ public:
 
 /* Node link class. Represents a single link between an object node and another node.
  */
-class Link
+class Link : public Versioned, public Observable<LinkObserver>
 {
+  friend class ObjectNode;
 public:
   /*! Destroys this node link.
    *  @remarks This call is asynchronous. It will not take effect
@@ -1314,12 +1328,20 @@ public:
    */
   ObjectNode& getNode(void) const;
 private:
-  Link(uint16 ID, ObjectNode& node);
+  Link(uint16 ID, const std::string& name, ObjectNode& node);
   VNodeID mNodeID;
   VNodeID mTargetID;
   uint16 mID;
   std::string mName;
   ObjectNode& mNode;
+};
+
+//---------------------------------------------------------------------
+
+class LinkObserver : public Observer<LinkObserver>
+{
+public:
+  virtual void onDestroy(Link& link);
 };
 
 //---------------------------------------------------------------------
@@ -1446,6 +1468,19 @@ private:
   };
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~ObjectNode(void);
+  static void initialize(void);
+  static void receiveTransformPosReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const real32* pos, const real32* speed, const real32* accelerate, const real32* dragNormal, real32 drag);
+  static void receiveTransformRotReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat32* rot, const VNQuat32* speed, const VNQuat32* accelerate, const VNQuat32* dragNormal, real32 drag);
+  static void receiveTransformScaleReal32(void* user, VNodeID nodeID, real32 scaleX, real32 scaleY, real32 scaleZ);
+  static void receiveTransformPosReal64(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const real64* pos, const real64* speed, const real64* accelerate, const real64* dragNormal, real64 drag);
+  static void receiveTransformRotReal64(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat64* rot, const VNQuat64* speed, const VNQuat64* accelerate, const VNQuat64* dragNormal, real64 drag);
+  static void receiveTransformScaleReal64(void* user, VNodeID nodeID, real64 scaleX, real64 scaleY, real64 scaleZ);
+  static void receiveLightSet(void* user, VNodeID nodeID, real64 lightR, real64 lightG, real64 lightB);
+  static void receiveLinkSet(void* user, VNodeID nodeID, uint16 linkID, VNodeID linkedNodeID, const char* name, uint32 targetID);
+  static void receiveLinkDestroy(void* user, VNodeID nodeID, uint16 linkID);
+  static void receiveMethodGroupCreate(void* user, VNodeID nodeID, uint16 groupID, const char* name);
+  static void receiveMethodGroupDestroy(void* user, VNodeID nodeID, uint16 groupID);
+  static void receiveAnimRun(void* user, VNodeID nodeID, uint16 linkID, uint32 seconds, uint32 fraction, real64 pos, real64 speed, real64 accel, real64 scale, real64 scaleSpeed);
   typedef std::vector<MethodGroup*> MethodGroupList;
   typedef std::vector<Link*> LinkList;
   MethodGroupList mGroups;
@@ -1476,6 +1511,8 @@ public:
    *  @param group The method group to be destroyed.
    */
   virtual void onDestroyMethodGroup(ObjectNode& node, MethodGroup& group);
+  virtual void onCreateLink(ObjectNode& node, Link& link);
+  virtual void onDestroyLink(ObjectNode& node, Link& link);
 };
 
 //---------------------------------------------------------------------
