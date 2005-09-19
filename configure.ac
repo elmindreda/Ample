@@ -17,7 +17,7 @@ AC_PROG_RANLIB
 AC_MSG_CHECKING([for a suitable OpenGL profile])
 case $host in
   *-*-mingw32* | *-*-cygwin*)
-    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])]
+    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
     LDFLAGS="-mwin32 -lopengl32 -lglu32 $LDFLAGS"
     AC_MSG_RESULT([Win32/WGL])
     ;;
@@ -32,7 +32,7 @@ case $host in
     if test -d /usr/X11R6/lib ; then
       LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
     fi
-    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])]
+    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
     LDFLAGS="-lGL -lGLU -lX11 -lpthread $LDFLAGS"
     AC_MSG_RESULT([POSIX/GLX])
     AC_CHECK_LIB([Xxf86vm], [XF86VidModeQueryExtension])

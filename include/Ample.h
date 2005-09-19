@@ -941,7 +941,9 @@ public:
                    VNGLayerType type,
 		   uint32 defaultInt = 0,
 		   real64 defaultReal = 0.0);
-  /*! @return The base mesh; i.e. all currently complete base layer polygons and their base layer vertices.
+  /*! Builds a base mesh of all the valid polygons and vertices in this geometry node.
+   *  @param mesh The mesh to receive the constructed geometry.
+   *  @return @c true if successful, or @c false if no valid geometry was available.
    *  @remarks This method is intended to make geometry extraction easier.
    */
   bool getBaseMesh(BaseMesh& mesh);
