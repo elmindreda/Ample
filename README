@@ -1,12 +1,13 @@
-Simple C++ retained mode library for verse.
+Simple C++ retained mode library for verse
+Copyright (c) PDC, KTH
 
 If you're on a Unix operating system and you just checked this out from CVS, you'll want to run bootstrap.sh to get a configure script. Otherwise, you'll probably want to make a Visual Studio project file. I don't provide one just yet.
 
 I know that the internals aren't very OO yet, but I've begun work on correcting that.
 
-Before you complain about implementation details, know that I'm aiming for API completeness first. Please do complain anyway, however. Feedback is always welcome.
+Before you complain about implementation details, especially concerning performance issues, note that I'm aiming for API completeness first, so most lookups are still O(n) or worse.
 
-Also, I know that the code isn't even slightly optimised. It will be, after the design has settled.
+Please do complain anyway, however. Feedback is always welcome.
 
-Note that the geometry node only supports 64-bit real layers for now.
+Also note that the geometry node only supports 64-bit real layers for now.
 

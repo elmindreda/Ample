@@ -1,7 +1,30 @@
+Simple C++ retained mode library for verse
+Copyright (c) PDC, KTH
+
+Audio node
+* Basic design.
+* Everything else.
+
+Bitmap node
+* Basic implementation.
+* Lots of layer code.
+
+Curve node
+* Basic design.
+* Everything else.
+
+Geometry node
 * Bone support.
-* Crease support.
-* Audio support.
-* Material support.
-* Curve support.
-* Bitmap support.
-* Object support.
+
+Material node
+* Basic design.
+* Everything else.
+
+Object node
+* Method argument pack/unpack code.
+* Method observer call notification.
+* Transform change notifications.
+
+Text node
+* Nothing right now.
+

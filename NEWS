@@ -1,6 +1,12 @@
+Simple C++ retained mode library for verse
+Copyright (c) PDC, KTH
+
 21 March 2005
 Core library works.
 
 01 April 2005
 Code approaching minimal usability.
+
+30 September 2005
+Lots of stuff.
 
