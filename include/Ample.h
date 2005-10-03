@@ -26,6 +26,8 @@ class BaseVertex;
 class BasePolygon;
 class BaseMesh;
 
+class Quaternion64;
+
 template <typename T>
 class Observer;
 template <typename T>
@@ -105,6 +107,39 @@ public:
   typedef std::vector<BasePolygon> PolygonList;
   VertexList mVertices;
   PolygonList mPolygons;
+};
+
+//---------------------------------------------------------------------
+
+class Quaternion64 : public VNQuat64
+{
+public:
+  Quaternion64(void);
+  Quaternion64(real64 sx, real64 sy, real64 sz, real64 sw);
+  void invert(void);
+  void normalize(void);
+  template <typename T>
+  void rotateVector(Vector3<T>& vector) const;
+  float dotProduct(const Quaternion64& other) const;
+  Quaternion64 interpolateTo(real64 t, const Quaternion64& other) const;
+  Quaternion64 operator * (real64 value) const;
+  Quaternion64 operator / (real64 value) const;
+  Quaternion64 operator + (const Quaternion64& quat) const;
+  Quaternion64 operator * (const Quaternion64& quat) const;
+  Quaternion64& operator += (const Quaternion64& quat);
+  Quaternion64& operator *= (const Quaternion64& quat);
+  Quaternion64& operator = (const VNQuat32& source);
+  Quaternion64& operator = (const VNQuat64& source);
+  bool operator == (const Quaternion64& quaternion) const;
+  bool operator != (const Quaternion64& quaternion) const;
+  void set(real64 sx, real64 sy, real64 sz, real64 sw);
+  void setDefaults(void);
+  template <typename T>
+  void setVectorRotation(const Vector3<T>& vector, T angle);
+  template <typename T>
+  void getAxisRotation(Vector3<T>& axis, T& angle) const;
+  template <typename T>
+  void setAxisRotation(const Vector3<T>& axis, T angle);
 };
 
 //---------------------------------------------------------------------
@@ -1163,7 +1198,7 @@ public:
    *  until, at the earliest, after the first subsequent call to
    *  Session::update.
    */
-  void call(const MethodArgumentList& arguments, VNodeID senderID = (VNodeID) ~0);
+  bool call(const MethodArgumentList& arguments, VNodeID senderID = (VNodeID) ~0);
   /*! @return The ID of this object method.
    */
   uint16 getID(void) const;
@@ -1436,10 +1471,10 @@ public:
   void setAccel(const Vector3d& accel);
   const Quaternion64& getRotation(void) const;
   void setRotation(const Quaternion64& rotation);
-  const Vector3d& getRotationSpeed(void) const;
-  void setRotationSpeed(const Vector3d& speed);
-  const Vector3d& getRotationAccel(void) const;
-  void setRotationAccel(const Vector3d& accel);
+  const Quaternion64& getRotationSpeed(void) const;
+  void setRotationSpeed(const Quaternion64& speed);
+  const Quaternion64& getRotationAccel(void) const;
+  void setRotationAccel(const Quaternion64& accel);
   /*! @return The scaling of this object node.
    */
   const Vector3d& getScale(void) const;
@@ -1461,8 +1496,8 @@ private:
   struct Rotation
   {
     Quaternion64 mRotation;
-    Quaternion64 mRotSpeed;
-    Quaternion64 mRotAccel;
+    Quaternion64 mSpeed;
+    Quaternion64 mAccel;
     Quaternion64 mDragNormal;
     uint32 mSeconds;
     uint32 mFraction;
