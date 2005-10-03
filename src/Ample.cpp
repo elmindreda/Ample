@@ -81,6 +81,53 @@ void BasePolygon::setInvalid(void)
 
 //---------------------------------------------------------------------
 
+Quaternion64::Quaternion64(void)
+{
+}
+
+Quaternion64::Quaternion64(real64 sx, real64 sy, real64 sz, real64 sw)
+{
+  set(sx, sy, sz, sw);
+}
+
+Quaternion64& Quaternion64::operator = (const VNQuat32& source)
+{
+  x = source.x;
+  y = source.y;
+  z = source.z;
+  w = source.w;
+  return *this;
+}
+
+Quaternion64& Quaternion64::operator = (const VNQuat64& source)
+{
+  x = source.x;
+  y = source.y;
+  z = source.z;
+  w = source.w;
+  return *this;
+}
+
+bool Quaternion64::operator == (const Quaternion64& quaternion) const
+{
+  return x == quaternion.x && y == quaternion.y && z == quaternion.z && w == quaternion.w;
+}
+
+bool Quaternion64::operator != (const Quaternion64& quaternion) const
+{
+  return x != quaternion.x || y != quaternion.y || z != quaternion.z || w != quaternion.w;
+}
+
+void Quaternion64::set(real64 sx, real64 sy, real64 sz, real64 sw)
+{
+  x = sx;
+  y = sy;
+  z = sz;
+  w = sw;
+}
+
+//---------------------------------------------------------------------
+
 Block::Block(void):
   mItemCount(0),
   mItemSize(1),

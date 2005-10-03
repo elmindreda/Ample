@@ -75,9 +75,20 @@ void Method::destroy(void)
   mGroup.getNode().getSession().pop();
 }
 
-void Method::call(const MethodArgumentList& arguments, VNodeID senderID)
+bool Method::call(const MethodArgumentList& arguments, VNodeID senderID)
 {
-  // TODO: Pack arguments.
+  if (arguments.size() != mParams.size())
+    return false;
+
+  size_t size = 0;
+  for (unsigned int i = 0;  i < mParams.size();  i++)
+    size += mParams[i].getSize();
+
+  char* data = new char [size];
+
+  off_t offset = 0;
+  for (unsigned int i = 0;  i < mParams.size();  i++)
+    memcpy(data + offset, &arguments[i], mParams[i].getSize());
 
   mGroup.getNode().getSession().push();
   //verse_send_o_method_call(mGroup.getNode().getID(), mGroup.getID(), mID, senderID, 
@@ -545,18 +556,148 @@ unsigned int ObjectNode::getLinkCount(void) const
   return mLinks.size();
 }
 
-const Vector3d& ObjectNode::getScale(void) const
+const Vector3d& ObjectNode::getPosition(void) const
+{
+  return mTranslation.mPosition;
+}
+
+void ObjectNode::setPosition(const Vector3d& position)
+{
+  mTranslationCache.mPosition = position;
+
+  getSession().push();
+  verse_send_o_transform_pos_real64(getID(),
+                                    mTranslationCache.mSeconds,
+                                    mTranslationCache.mFraction,
+                                    mTranslationCache.mPosition,
+                                    mTranslationCache.mSpeed,
+                                    mTranslationCache.mAccel,
+                                    mTranslationCache.mDragNormal,
+                                    mTranslationCache.mDrag);
+  getSession().pop();
+}
+
+const Vector3d& ObjectNode::getSpeed(void) const
+{
+  return mTranslation.mSpeed;
+}
+
+void ObjectNode::setSpeed(const Vector3d& speed)
+{
+  mTranslationCache.mSpeed = speed;
+
+  getSession().push();
+  verse_send_o_transform_pos_real64(getID(),
+                                    mTranslationCache.mSeconds,
+                                    mTranslationCache.mFraction,
+                                    mTranslationCache.mPosition,
+                                    mTranslationCache.mSpeed,
+                                    mTranslationCache.mAccel,
+                                    mTranslationCache.mDragNormal,
+                                    mTranslationCache.mDrag);
+  getSession().pop();
+}
+
+const Vector3d& ObjectNode::getAccel(void) const
+{
+  return mTranslation.mAccel;
+}
+
+void ObjectNode::setAccel(const Vector3d& accel)
+{
+  mTranslationCache.mAccel = accel;
+
+  getSession().push();
+  verse_send_o_transform_pos_real64(getID(),
+                                    mTranslationCache.mSeconds,
+                                    mTranslationCache.mFraction,
+                                    mTranslationCache.mPosition,
+                                    mTranslationCache.mSpeed,
+                                    mTranslationCache.mAccel,
+                                    mTranslationCache.mDragNormal,
+                                    mTranslationCache.mDrag);
+  getSession().pop();
+}
+
+const Quaternion64& ObjectNode::getRotation(void) const
+{
+  return mRotation.mRotation;
+}
+
+void ObjectNode::setRotation(const Quaternion64& rotation)
+{
+  mRotationCache.mRotation = rotation;
+
+  getSession().push();
+  verse_send_o_transform_rot_real64(getID(),
+                                    mRotationCache.mSeconds,
+                                    mRotationCache.mFraction,
+                                    &mRotationCache.mRotation,
+                                    &mRotationCache.mSpeed,
+                                    &mRotationCache.mAccel,
+                                    &mRotationCache.mDragNormal,
+                                    mRotationCache.mDrag);
+  getSession().pop();
+}
+
+const Quaternion64& ObjectNode::getRotationSpeed(void) const
+{
+  return mRotation.mSpeed;
+}
+
+void ObjectNode::setRotationSpeed(const Quaternion64& speed)
+{
+  mRotationCache.mSpeed = speed;
+
+  getSession().push();
+  verse_send_o_transform_rot_real64(getID(),
+                                    mRotationCache.mSeconds,
+                                    mRotationCache.mFraction,
+                                    &mRotationCache.mRotation,
+                                    &mRotationCache.mSpeed,
+                                    &mRotationCache.mAccel,
+                                    &mRotationCache.mDragNormal,
+                                    mRotationCache.mDrag);
+  getSession().pop();
+}
+
+const Quaternion64& ObjectNode::getRotationAccel(void) const
+{
+  return mRotation.mAccel;
+}
+
+void ObjectNode::setRotationAccel(const Quaternion64& accel)
+{
+  mRotationCache.mAccel = accel;
+
+  getSession().push();
+  verse_send_o_transform_rot_real64(getID(),
+                                    mRotationCache.mSeconds,
+                                    mRotationCache.mFraction,
+                                    &mRotationCache.mRotation,
+                                    &mRotationCache.mSpeed,
+                                    &mRotationCache.mAccel,
+                                    &mRotationCache.mDragNormal,
+                                    mRotationCache.mDrag);
+  getSession().pop();
+}
+
+const Vector3d& ObjectNode::ObjectNode::getScale(void) const
 {
   return mScale;
 }
 
 void ObjectNode::setScale(const Vector3d& scale)
 {
+  getSession().push();
+  verse_send_o_transform_scale_real64(getID(), scale.x, scale.y, scale.z);
+  getSession().pop();
 }
 
 ObjectNode::ObjectNode(VNodeID ID, VNodeOwner owner, Session& session):
   Node(ID, V_NT_OBJECT, owner, session)
 {
+  verse_send_o_transform_subscribe(getID(), VN_FORMAT_REAL64);
 }
 
 ObjectNode::~ObjectNode(void)
@@ -616,35 +757,123 @@ void ObjectNode::initialize(void)
                      NULL);
 }
 
-void ObjectNode::receiveTransformPosReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const real32* pos, const real32* speed, const real32* accelerate, const real32* dragNormal, real32 drag)
+void ObjectNode::receiveTransformPosReal32(void* user,
+                                           VNodeID nodeID,
+                                           uint32 seconds,
+                                           uint32 fraction,
+                                           const real32* position,
+                                           const real32* speed,
+                                           const real32* accel,
+                                           const real32* dragNormal,
+                                           real32 drag)
 {
 }
 
-void ObjectNode::receiveTransformRotReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat32* rot, const VNQuat32* speed, const VNQuat32* accelerate, const VNQuat32* dragNormal, real32 drag)
+void ObjectNode::receiveTransformRotReal32(void* user,
+                                           VNodeID nodeID,
+                                           uint32 seconds,
+                                           uint32 fraction,
+                                           const VNQuat32* rotation,
+                                           const VNQuat32* speed,
+                                           const VNQuat32* accelerate,
+                                           const VNQuat32* dragNormal,
+                                           real32 drag)
 {
 }
 
-void ObjectNode::receiveTransformScaleReal32(void* user, VNodeID nodeID, real32 scaleX, real32 scaleY, real32 scaleZ)
+void ObjectNode::receiveTransformScaleReal32(void* user,
+                                             VNodeID nodeID,
+                                             real32 scaleX,
+                                             real32 scaleY,
+                                             real32 scaleZ)
 {
 }
 
-void ObjectNode::receiveTransformPosReal64(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const real64* pos, const real64* speed, const real64* accelerate, const real64* dragNormal, real64 drag)
+void ObjectNode::receiveTransformPosReal64(void* user,
+                                           VNodeID nodeID,
+                                           uint32 seconds,
+                                           uint32 fraction,
+                                           const real64* position,
+                                           const real64* speed,
+                                           const real64* accel,
+                                           const real64* dragNormal,
+                                           real64 drag)
+{
+  Session* session = Session::getCurrent();
+
+  ObjectNode* node = dynamic_cast<ObjectNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  node->mTranslation.mPosition.set(position[0], position[1], position[2]);
+  node->mTranslation.mSpeed.set(speed[0], speed[1], speed[2]);
+  node->mTranslation.mAccel.set(accel[0], accel[1], accel[2]);
+  node->mTranslation.mDragNormal.set(dragNormal[0], dragNormal[1], dragNormal[2]);
+
+  node->mTranslation.mSeconds = seconds;
+  node->mTranslation.mFraction = fraction;
+  node->mTranslation.mDrag = drag;
+
+  node->mTranslationCache = node->mTranslation;
+}
+
+void ObjectNode::receiveTransformRotReal64(void* user,
+                                           VNodeID nodeID,
+                                           uint32 seconds,
+                                           uint32 fraction,
+                                           const VNQuat64* rotation,
+                                           const VNQuat64* speed,
+                                           const VNQuat64* accel,
+                                           const VNQuat64* dragNormal,
+                                           real64 drag)
+{
+  Session* session = Session::getCurrent();
+
+  ObjectNode* node = dynamic_cast<ObjectNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  node->mRotation.mRotation = *rotation;
+  node->mRotation.mSpeed = *speed;
+  node->mRotation.mAccel = *accel;
+  node->mRotation.mDragNormal = *dragNormal;
+
+  node->mRotation.mSeconds = seconds;
+  node->mRotation.mFraction = fraction;
+  node->mRotation.mDrag = drag;
+
+  node->mRotationCache = node->mRotation;
+}
+
+void ObjectNode::receiveTransformScaleReal64(void* user,
+                                             VNodeID nodeID,
+                                             real64 scaleX,
+                                             real64 scaleY,
+                                             real64 scaleZ)
+{
+  Session* session = Session::getCurrent();
+
+  ObjectNode* node = dynamic_cast<ObjectNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  node->mScale.set(scaleX, scaleY, scaleZ);
+}
+
+void ObjectNode::receiveLightSet(void* user,
+                                 VNodeID nodeID,
+                                 real64 lightR,
+                                 real64 lightG,
+                                 real64 lightB)
 {
 }
 
-void ObjectNode::receiveTransformRotReal64(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat64* rot, const VNQuat64* speed, const VNQuat64* accelerate, const VNQuat64* dragNormal, real64 drag)
-{
-}
-
-void ObjectNode::receiveTransformScaleReal64(void* user, VNodeID nodeID, real64 scaleX, real64 scaleY, real64 scaleZ)
-{
-}
-
-void ObjectNode::receiveLightSet(void* user, VNodeID nodeID, real64 lightR, real64 lightG, real64 lightB)
-{
-}
-
-void ObjectNode::receiveLinkSet(void* user, VNodeID nodeID, uint16 linkID, VNodeID linkedNodeID, const char* name, uint32 targetID)
+void ObjectNode::receiveLinkSet(void* user,
+                                VNodeID nodeID,
+                                uint16 linkID,
+                                VNodeID linkedNodeID,
+                                const char* name,
+                                uint32 targetID)
 {
   Session* session = Session::getCurrent();
 

@@ -693,7 +693,7 @@ void GeometryLayer::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VL
     return;
 
   GeometryLayer* layer = node->getLayerByID(layerID);
-  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_CORNER_UINT32)
+  if (!layer || layer->getType() != VN_G_LAYER_POLYGON_CORNER_REAL)
     return;
   
   Slot sourceSlot;
