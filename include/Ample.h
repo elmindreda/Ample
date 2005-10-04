@@ -1076,9 +1076,17 @@ public:
    *  data, or the empty string if no name is set.
    */
   const std::string& getEdgeCreaseLayerName(void) const;
+  /*! @return The highest currently valid vertex ID.
+   */
   uint32 getHighestVertexID(void) const;
+  /*! @return The highest currently valid polygon ID.
+   */
   uint32 getHighestPolygonID(void) const;
+  /*! @return The number of valid vertices.
+   */
   uint32 getVertexCount(void) const;
+  /*! @return The number of valid polygons.
+   */
   uint32 getPolygonCount(void) const;
 private:
   GeometryNode(VNodeID ID, VNodeOwner owner, Session& session);
@@ -1205,14 +1213,23 @@ public:
   /*! @return The name of this object method.
    */
   const std::string& getName(void) const;
+  /*! @return The number of parameters for this method.
+   */
   uint8 getParamCount(void) const;
+  /*! @param index The index of the desired parameter.
+   *  @return The parameter with the specified index.
+   */
   const MethodParam& getParam(uint8 index);
+  /*! @return The method group containing this method.
+   */
   MethodGroup& getGroup(void) const;
 private:
   Method(uint16 ID, const std::string& name, MethodGroup& group);
   static void initialize(void);
   static void receiveMethodCall(void* user, VNodeID nodeID, uint16 groupID, uint16 methodID, VNodeID senderID, const VNOPackedParams* arguments);
+  typedef std::vector<VNOParamType> ParamTypeList;
   MethodParamList mParams;
+  ParamTypeList mTypes;
   uint16 mID;
   std::string mName;
   MethodGroup& mGroup;
@@ -1464,12 +1481,42 @@ public:
   /*! @return The current position of this object node.
    */
   const Vector3d& getPosition(void) const;
+  /*! Sets the position of this object node.
+   *  @param position The desired new position.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setPosition(const Vector3d& position);
+  /*! @return The current movement speed of this object node.
+   */
   const Vector3d& getSpeed(void) const;
+  /*! Sets the movement speed of this object node.
+   *  @param speed The desired new movement speed.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setSpeed(const Vector3d& speed);
+  /*! @return The current movement acceleration of this object node.
+   */
   const Vector3d& getAccel(void) const;
+  /*! Sets the movement acceleration of this object node.
+   *  @param accel The desired new movement acceleration.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setAccel(const Vector3d& accel);
+  /*! @return The current rotation of this object node.
+   */
   const Quaternion64& getRotation(void) const;
+  /*! Sets the rotation of this object node.
+   *  @param rotation The desired new rotation.
+   *  @remarks This call is asynchronous. It will not take effect
+   *  until, at the earliest, after the first subsequent call to
+   *  Session::update.
+   */
   void setRotation(const Quaternion64& rotation);
   const Quaternion64& getRotationSpeed(void) const;
   void setRotationSpeed(const Quaternion64& speed);
@@ -1760,7 +1807,13 @@ public:
   /*! @return The active session, or @c NULL if no session is active.
    */
   static Session* getCurrent(void);
+  /*! @param index The index of the desired session.
+   *  @return The session with the specified index, or @c NULL if no
+   *  such session exists.
+   */
   static Session* getByIndex(unsigned int index);
+  /*! @return The number of sessions.
+   */
   static unsigned int getCount(void);
 private:
   Session(const std::string& address,
@@ -1830,6 +1883,4 @@ public:
 
   } /*namespace ample*/
 } /*namespace verse*/
-
-
 

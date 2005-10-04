@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(ample, 0.0.3, clb@nada.kth.se)
+AC_INIT(ample, 0.0.3, clb@kth.se)
 AC_CONFIG_SRCDIR([src/AmpleNode.cpp])
 AM_INIT_AUTOMAKE([check-news])
 AM_CONFIG_HEADER([include/config.h])
@@ -26,15 +26,15 @@ case $host in
     AC_MSG_RESULT([Carbon/AGL])
     ;;
   *)
+    AC_MSG_RESULT([POSIX/GLX])
     if test -d /usr/X11R6/include ; then
       CPPFLAGS="-I/usr/X11R6/include $CPPFLAGS"
     fi
     if test -d /usr/X11R6/lib ; then
       LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
     fi
-    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
     LDFLAGS="-lGL -lGLU -lX11 -lpthread $LDFLAGS"
-    AC_MSG_RESULT([POSIX/GLX])
+    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
     AC_CHECK_LIB([Xxf86vm], [XF86VidModeQueryExtension])
     ;;
 esac

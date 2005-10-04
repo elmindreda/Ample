@@ -1,13 +1,32 @@
-Simple C++ retained mode library for verse
+Simple C++ retained mode library for Verse
 Copyright (c) PDC, KTH
 
-If you're on a Unix operating system and you just checked this out from CVS, you'll want to run bootstrap.sh to get a configure script. Otherwise, you'll probably want to make a Visual Studio project file. I don't provide one just yet.
+Ample is written and maintained by Camilla Berglund <clb@kth.se>.
 
-I know that the internals aren't very OO yet, but I've begun work on correcting that.
+Many thanks to brecht and slas for suggestions, bug reports and patches.
 
-Before you complain about implementation details, especially concerning performance issues, note that I'm aiming for API completeness first, so most lookups are still O(n) or worse.
+The (temporary) website for Ample is:
+http://www.elmindreda.org/ample/
 
-Please do complain anyway, however. Feedback is always welcome.
+To retrieve Ample from anonymous CVS, use:
 
-Also note that the geometry node only supports 64-bit real layers for now.
+  cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/verse co ample
+
+If you're on a Unix operating system and you just checked this out from
+CVS, you'll want to run bootstrap.sh to get a configure script.
+
+Otherwise, you'll probably want to make a Visual Studio project file.
+I don't provide one just yet.
+
+I know that the internals aren't very OO yet, but I've begun work on
+correcting that.
+
+Before you complain about implementation details, especially concerning
+performance issues, note that I'm aiming for API completeness first, so
+most lookups are still O(n) or worse.
+
+Please do complain anyway, however.  Feedback is always welcome.
+
+Also note that the geometry node only supports 64-bit real layers for
+now.  This will probably change, one day.
 

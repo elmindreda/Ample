@@ -80,6 +80,11 @@ bool Method::call(const MethodArgumentList& arguments, VNodeID senderID)
   if (arguments.size() != mParams.size())
     return false;
 
+  // NOTE: This call isn't strictly portable, as we're assuming
+  // that &v[0] on an STL vector leads to a regular array.
+  // In other words; this is bad, don't do this.
+  VNOPackedParams* packedArguments = verse_method_call_pack(mTypes.size(), &mTypes[0], &arguments[0]);
+  /*
   size_t size = 0;
   for (unsigned int i = 0;  i < mParams.size();  i++)
     size += mParams[i].getSize();
@@ -89,9 +94,10 @@ bool Method::call(const MethodArgumentList& arguments, VNodeID senderID)
   off_t offset = 0;
   for (unsigned int i = 0;  i < mParams.size();  i++)
     memcpy(data + offset, &arguments[i], mParams[i].getSize());
+  */
 
   mGroup.getNode().getSession().push();
-  //verse_send_o_method_call(mGroup.getNode().getID(), mGroup.getID(), mID, senderID, 
+  verse_send_o_method_call(mGroup.getNode().getID(), mGroup.getID(), mID, senderID, packedArguments);
   mGroup.getNode().getSession().pop();
 }
 
@@ -322,7 +328,10 @@ void MethodGroup::receiveMethodCreate(void* user, VNodeID nodeID, uint16 groupID
     method = new Method(methodID, name, *group);
 
     for (unsigned int i = 0;  i < paramCount;  i++)
+    {
       method->mParams.push_back(MethodParam(paramNames[i], paramTypes[i]));
+      method->mTypes.push_back(paramTypes[i]);
+    }
 
     group->mMethods.push_back(method);
     group->updateStructure();
@@ -805,14 +814,33 @@ void ObjectNode::receiveTransformPosReal64(void* user,
   if (!node)
     return;
 
-  node->mTranslation.mPosition.set(position[0], position[1], position[2]);
-  node->mTranslation.mSpeed.set(speed[0], speed[1], speed[2]);
-  node->mTranslation.mAccel.set(accel[0], accel[1], accel[2]);
-  node->mTranslation.mDragNormal.set(dragNormal[0], dragNormal[1], dragNormal[2]);
+  if (position)
+  {
+    node->mTranslation.mPosition.set(position[0], position[1], position[2]);
+    node->mTranslationCache.mPosition = node->mTranslation.mPosition;
+  }
+
+  if (speed)
+  {
+    node->mTranslation.mSpeed.set(speed[0], speed[1], speed[2]);
+    node->mTranslationCache.mSpeed = node->mTranslation.mSpeed;
+  }
+
+  if (accel)
+  {
+    node->mTranslation.mAccel.set(accel[0], accel[1], accel[2]);
+    node->mTranslationCache.mAccel = node->mTranslation.mAccel;
+  }
+
+  if (dragNormal)
+  {
+    node->mTranslation.mDragNormal.set(dragNormal[0], dragNormal[1], dragNormal[2]);
+    node->mTranslationCache.mDragNormal = node->mTranslation.mDragNormal;
+    node->mTranslation.mDrag = drag;
+  }
 
   node->mTranslation.mSeconds = seconds;
   node->mTranslation.mFraction = fraction;
-  node->mTranslation.mDrag = drag;
 
   node->mTranslationCache = node->mTranslation;
 }
@@ -833,16 +861,33 @@ void ObjectNode::receiveTransformRotReal64(void* user,
   if (!node)
     return;
 
-  node->mRotation.mRotation = *rotation;
-  node->mRotation.mSpeed = *speed;
-  node->mRotation.mAccel = *accel;
-  node->mRotation.mDragNormal = *dragNormal;
+  if (rotation)
+  {
+    node->mRotation.mRotation = *rotation;
+    node->mRotationCache.mRotation = *rotation;
+  }
+
+  if (speed)
+  {
+    node->mRotation.mSpeed = *speed;
+    node->mRotationCache.mSpeed = *speed;
+  }
+
+  if (accel)
+  {
+    node->mRotation.mAccel = *accel;
+    node->mRotationCache.mAccel = *accel;
+  }
+
+  if (dragNormal)
+  {
+    node->mRotation.mDragNormal = *dragNormal;
+    node->mRotationCache.mDragNormal = *dragNormal;
+    node->mRotation.mDrag = drag;
+  }
 
   node->mRotation.mSeconds = seconds;
   node->mRotation.mFraction = fraction;
-  node->mRotation.mDrag = drag;
-
-  node->mRotationCache = node->mRotation;
 }
 
 void ObjectNode::receiveTransformScaleReal64(void* user,
