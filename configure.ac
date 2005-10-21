@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(ample, 0.0.3, clb@kth.se)
+AC_INIT(ample, 0.3, clb@kth.se)
 AC_CONFIG_SRCDIR([src/AmpleNode.cpp])
 AM_INIT_AUTOMAKE([check-news])
 AM_CONFIG_HEADER([include/config.h])
@@ -27,15 +27,19 @@ case $host in
     ;;
   *)
     AC_MSG_RESULT([POSIX/GLX])
-    if test -d /usr/X11R6/include ; then
-      CPPFLAGS="-I/usr/X11R6/include $CPPFLAGS"
+    dir=/usr/X11R6/include
+    if test -d $dir ; then
+      CPPFLAGS="-I$dir $CPPFLAGS"
     fi
-    if test -d /usr/X11R6/lib ; then
-      LDFLAGS="-L/usr/X11R6/lib $LDFLAGS"
+    dir=/usr/X11R6/lib
+    if test -d $dir ; then
+      LDFLAGS="-L$dir $LDFLAGS"
     fi
-    LDFLAGS="-lGL -lGLU -lX11 -lpthread $LDFLAGS"
-    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
+    AC_CHECK_LIB([X11], [XCreateWindow], [], [AC_MSG_ERROR([X11 GLX not found])])
     AC_CHECK_LIB([Xxf86vm], [XF86VidModeQueryExtension])
+    AC_CHECK_LIB([GL], [glGetString], [], [AC_MSG_ERROR([OpenGL not found])])
+    AC_CHECK_LIB([GLU], [gluGetString], [], [AC_MSG_ERROR([GLU not found])])
+    AC_CHECK_LIB([glut], [glutInit], [], [AC_MSG_ERROR([GLUT not found])])
     ;;
 esac
 
@@ -47,6 +51,7 @@ AC_ARG_WITH([verse], [AC_HELP_STRING([--with-verse], [location of verse])],
   CPPFLAGS="-I$withval $CPPFLAGS"
   LDFLAGS="-L$withval $LDFLAGS"
 ])
+AC_CHECK_LIB([verse], [verse_send_connect], [], [AC_MSG_ERROR([library not found])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([verse.h], [], [AC_MSG_ERROR([header not found])])
@@ -56,7 +61,6 @@ AC_HEADER_STDBOOL
 AC_C_CONST
 
 # Checks for library functions.
-AC_CHECK_LIB([verse], [verse_send_connect], [], [AC_MSG_ERROR([library not found])])
 
 AC_OUTPUT(
   Makefile

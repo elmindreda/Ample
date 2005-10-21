@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -84,21 +89,12 @@ bool Method::call(const MethodArgumentList& arguments, VNodeID senderID)
   // that &v[0] on an STL vector leads to a regular array.
   // In other words; this is bad, don't do this.
   VNOPackedParams* packedArguments = verse_method_call_pack(mTypes.size(), &mTypes[0], &arguments[0]);
-  /*
-  size_t size = 0;
-  for (unsigned int i = 0;  i < mParams.size();  i++)
-    size += mParams[i].getSize();
-
-  char* data = new char [size];
-
-  off_t offset = 0;
-  for (unsigned int i = 0;  i < mParams.size();  i++)
-    memcpy(data + offset, &arguments[i], mParams[i].getSize());
-  */
 
   mGroup.getNode().getSession().push();
   verse_send_o_method_call(mGroup.getNode().getID(), mGroup.getID(), mID, senderID, packedArguments);
   mGroup.getNode().getSession().pop();
+
+  free(packedArguments);
 }
 
 uint16 Method::getID(void) const
@@ -156,18 +152,23 @@ void Method::receiveMethodCall(void* user, VNodeID nodeID, uint16 groupID, uint1
   if (!method)
     return;
 
-  // TODO: Unpack arguments.
-
   MethodArgumentList unpackedArguments;
+  unpackedArguments.resize(method->mParams.size());
+
+  verse_method_call_unpack(arguments, method->mParams.size(), &(method->mTypes[0]), &unpackedArguments[0]);
 
   const ObserverList& observers = method->getObservers();
-  for (ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-    (*observer)->onCall(*method, unpackedArguments);
+  for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    (*i)->onCall(*method, unpackedArguments);
 }
 
 //---------------------------------------------------------------------
 
 void MethodObserver::onCall(Method& method, const MethodArgumentList& arguments)
+{
+}
+
+void MethodObserver::onSetName(Method& method, const std::string& name)
 {
 }
 
@@ -317,11 +318,15 @@ void MethodGroup::receiveMethodCreate(void* user, VNodeID nodeID, uint16 groupID
   {
     if (method->mName != name)
     {
-      // TODO: Notify name change.
+      const Method::ObserverList& observers = method->getObservers();
+      for (Method::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*method, name);
+
+      method->mName = name;
+      method->updateDataVersion();
     }
 
-    // NOTE: This is bad. Don't do this.
-    receiveMethodDestroy(user, nodeID, groupID, methodID);
+    // TODO: Notify observers of parameter changes.
   }
   else
   {
@@ -334,7 +339,7 @@ void MethodGroup::receiveMethodCreate(void* user, VNodeID nodeID, uint16 groupID
     }
 
     group->mMethods.push_back(method);
-    group->updateStructure();
+    group->updateStructureVersion();
 
     const MethodGroup::ObserverList& observers = group->getObservers();
     for (MethodGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -376,7 +381,7 @@ void MethodGroup::receiveMethodDestroy(void* user, VNodeID nodeID, uint16 groupI
       delete *method;
       methods.erase(method);
 
-      group->updateStructure();
+      group->updateStructureVersion();
       break;
     }
   }
@@ -416,17 +421,45 @@ uint16 Link::getID(void) const
 
 VNodeID Link::getLinkedNodeID(void) const
 {
-  return mNodeID;
+  return mState.mNodeID;
+}
+
+Node* Link::getLinkedNode(void) const
+{
+  return mNode.getSession().getNodeByID(mState.mNodeID);
+}
+
+void Link::setLinkedNode(VNodeID nodeID)
+{
+  mCache.mNodeID = nodeID;
+  sendData();
 }
 
 VNodeID Link::getTargetNodeID(void) const
 {
-  return mTargetID;
+  return mState.mTargetID;
+}
+
+Node* Link::getTargetNode(void) const
+{
+  return mNode.getSession().getNodeByID(mState.mTargetID);
+}
+
+void Link::setTargetNode(VNodeID nodeID)
+{
+  mCache.mTargetID = nodeID;
+  sendData();
 }
 
 const std::string& Link::getName(void) const
 {
-  return mName;
+  return mState.mName;
+}
+
+void Link::setName(const std::string& name)
+{
+  mCache.mName = name;
+  sendData();
 }
 
 ObjectNode& Link::getNode(void) const
@@ -434,14 +467,77 @@ ObjectNode& Link::getNode(void) const
   return mNode;
 }
 
-Link::Link(uint16 ID, const std::string& name, ObjectNode& node):
+Link::Link(uint16 ID, const std::string& name, VNodeID nodeID, VNodeID targetID, ObjectNode& node):
   mID(ID),
-  mName(name),
   mNode(node)
 {
+  mCache.mName = mState.mName = name;
+  mCache.mNodeID = mState.mNodeID = nodeID;
+  mCache.mTargetID = mState.mTargetID = targetID;
+}
+
+void Link::sendData(void)
+{
+  mNode.getSession().push();
+  verse_send_o_link_set(mNode.getID(),
+                        mID,
+			mCache.mNodeID,
+			mCache.mName.c_str(),
+			mCache.mTargetID);
+  mNode.getSession().pop();
+}
+
+void Link::receiveLinkSet(void* user,
+                          VNodeID nodeID,
+			  uint16 linkID,
+			  VNodeID linkedNodeID,
+			  const char* name,
+			  uint32 targetNodeID)
+{
+  if (mState.mName != name)
+  {
+    const Link::ObserverList& observers = getObservers();
+    for (Link::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetName(*this, name);
+
+    mCache.mName = mState.mName = name;
+    updateDataVersion();
+  }
+
+  if (mState.mNodeID != linkedNodeID)
+  {
+    const Link::ObserverList& observers = getObservers();
+    for (Link::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetLinkedNode(*this, linkedNodeID);
+
+    mCache.mNodeID = mState.mNodeID = linkedNodeID;
+    updateDataVersion();
+  }
+
+  if (mState.mTargetID != targetNodeID)
+  {
+    const Link::ObserverList& observers = getObservers();
+    for (Link::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetTargetNode(*this, targetNodeID);
+
+    mCache.mTargetID = mState.mTargetID = targetNodeID;
+    updateDataVersion();
+  }
 }
 
 //---------------------------------------------------------------------
+
+void LinkObserver::onSetLinkedNode(Link& link, VNodeID nodeID)
+{
+}
+
+void LinkObserver::onSetTargetNode(Link& link, VNodeID targetID)
+{
+}
+
+void LinkObserver::onSetName(Link& link, const std::string name)
+{
+}
 
 void LinkObserver::onDestroy(Link& link)
 {
@@ -461,6 +557,23 @@ void ObjectNode::createLink(const std::string& name, VNodeID nodeID, VNodeID tar
   getSession().push();
   verse_send_o_link_set(getID(), 0, nodeID, name.c_str(), targetID);
   getSession().pop();
+}
+
+bool ObjectNode::isLight(void) const
+{
+  return mIntensity.r == 0.f && mIntensity.g == 0.f && mIntensity.b == 0.f;
+}
+
+void ObjectNode::setLightIntensity(const ColorRGB& intensity)
+{
+  getSession().push();
+  verse_send_o_light_set(getID(), intensity.r, intensity.g, intensity.b);
+  getSession().pop();
+}
+
+const ColorRGB& ObjectNode::getLightIntensity(void) const
+{
+  return mIntensity;
 }
 
 MethodGroup* ObjectNode::getMethodGroupByID(uint16 groupID)
@@ -565,6 +678,27 @@ unsigned int ObjectNode::getLinkCount(void) const
   return mLinks.size();
 }
 
+Node* ObjectNode::getNodeByLinkName(const std::string& name) const
+{
+  const Link* link = getLinkByName(name);
+  if (!link)
+    return NULL;
+
+  return link->getLinkedNode();
+}
+
+void ObjectNode::setTranslation(const Translation& translation)
+{
+  mTranslationCache = translation;
+  sendTranslation();
+}
+
+void ObjectNode::setRotation(const Rotation& rotation)
+{
+  mRotationCache = rotation;
+  sendRotation();
+}
+
 const Vector3d& ObjectNode::getPosition(void) const
 {
   return mTranslation.mPosition;
@@ -573,17 +707,7 @@ const Vector3d& ObjectNode::getPosition(void) const
 void ObjectNode::setPosition(const Vector3d& position)
 {
   mTranslationCache.mPosition = position;
-
-  getSession().push();
-  verse_send_o_transform_pos_real64(getID(),
-                                    mTranslationCache.mSeconds,
-                                    mTranslationCache.mFraction,
-                                    mTranslationCache.mPosition,
-                                    mTranslationCache.mSpeed,
-                                    mTranslationCache.mAccel,
-                                    mTranslationCache.mDragNormal,
-                                    mTranslationCache.mDrag);
-  getSession().pop();
+  sendTranslation();
 }
 
 const Vector3d& ObjectNode::getSpeed(void) const
@@ -594,17 +718,7 @@ const Vector3d& ObjectNode::getSpeed(void) const
 void ObjectNode::setSpeed(const Vector3d& speed)
 {
   mTranslationCache.mSpeed = speed;
-
-  getSession().push();
-  verse_send_o_transform_pos_real64(getID(),
-                                    mTranslationCache.mSeconds,
-                                    mTranslationCache.mFraction,
-                                    mTranslationCache.mPosition,
-                                    mTranslationCache.mSpeed,
-                                    mTranslationCache.mAccel,
-                                    mTranslationCache.mDragNormal,
-                                    mTranslationCache.mDrag);
-  getSession().pop();
+  sendTranslation();
 }
 
 const Vector3d& ObjectNode::getAccel(void) const
@@ -615,17 +729,7 @@ const Vector3d& ObjectNode::getAccel(void) const
 void ObjectNode::setAccel(const Vector3d& accel)
 {
   mTranslationCache.mAccel = accel;
-
-  getSession().push();
-  verse_send_o_transform_pos_real64(getID(),
-                                    mTranslationCache.mSeconds,
-                                    mTranslationCache.mFraction,
-                                    mTranslationCache.mPosition,
-                                    mTranslationCache.mSpeed,
-                                    mTranslationCache.mAccel,
-                                    mTranslationCache.mDragNormal,
-                                    mTranslationCache.mDrag);
-  getSession().pop();
+  sendTranslation();
 }
 
 const Quaternion64& ObjectNode::getRotation(void) const
@@ -636,17 +740,7 @@ const Quaternion64& ObjectNode::getRotation(void) const
 void ObjectNode::setRotation(const Quaternion64& rotation)
 {
   mRotationCache.mRotation = rotation;
-
-  getSession().push();
-  verse_send_o_transform_rot_real64(getID(),
-                                    mRotationCache.mSeconds,
-                                    mRotationCache.mFraction,
-                                    &mRotationCache.mRotation,
-                                    &mRotationCache.mSpeed,
-                                    &mRotationCache.mAccel,
-                                    &mRotationCache.mDragNormal,
-                                    mRotationCache.mDrag);
-  getSession().pop();
+  sendRotation();
 }
 
 const Quaternion64& ObjectNode::getRotationSpeed(void) const
@@ -657,17 +751,7 @@ const Quaternion64& ObjectNode::getRotationSpeed(void) const
 void ObjectNode::setRotationSpeed(const Quaternion64& speed)
 {
   mRotationCache.mSpeed = speed;
-
-  getSession().push();
-  verse_send_o_transform_rot_real64(getID(),
-                                    mRotationCache.mSeconds,
-                                    mRotationCache.mFraction,
-                                    &mRotationCache.mRotation,
-                                    &mRotationCache.mSpeed,
-                                    &mRotationCache.mAccel,
-                                    &mRotationCache.mDragNormal,
-                                    mRotationCache.mDrag);
-  getSession().pop();
+  sendRotation();
 }
 
 const Quaternion64& ObjectNode::getRotationAccel(void) const
@@ -678,17 +762,7 @@ const Quaternion64& ObjectNode::getRotationAccel(void) const
 void ObjectNode::setRotationAccel(const Quaternion64& accel)
 {
   mRotationCache.mAccel = accel;
-
-  getSession().push();
-  verse_send_o_transform_rot_real64(getID(),
-                                    mRotationCache.mSeconds,
-                                    mRotationCache.mFraction,
-                                    &mRotationCache.mRotation,
-                                    &mRotationCache.mSpeed,
-                                    &mRotationCache.mAccel,
-                                    &mRotationCache.mDragNormal,
-                                    mRotationCache.mDrag);
-  getSession().pop();
+  sendRotation();
 }
 
 const Vector3d& ObjectNode::ObjectNode::getScale(void) const
@@ -706,7 +780,6 @@ void ObjectNode::setScale(const Vector3d& scale)
 ObjectNode::ObjectNode(VNodeID ID, VNodeOwner owner, Session& session):
   Node(ID, V_NT_OBJECT, owner, session)
 {
-  verse_send_o_transform_subscribe(getID(), VN_FORMAT_REAL64);
 }
 
 ObjectNode::~ObjectNode(void)
@@ -722,6 +795,34 @@ ObjectNode::~ObjectNode(void)
     delete mGroups.back();
     mGroups.pop_back();
   }
+}
+
+void ObjectNode::sendTranslation(void)
+{
+  getSession().push();
+  verse_send_o_transform_pos_real64(getID(),
+                                    mTranslationCache.mSeconds,
+                                    mTranslationCache.mFraction,
+                                    mTranslationCache.mPosition,
+                                    mTranslationCache.mSpeed,
+                                    mTranslationCache.mAccel,
+                                    mTranslationCache.mDragNormal,
+                                    mTranslationCache.mDrag);
+  getSession().pop();
+}
+
+void ObjectNode::sendRotation(void)
+{
+  getSession().push();
+  verse_send_o_transform_rot_real64(getID(),
+                                    mRotationCache.mSeconds,
+                                    mRotationCache.mFraction,
+                                    &mRotationCache.mRotation,
+                                    &mRotationCache.mSpeed,
+                                    &mRotationCache.mAccel,
+                                    &mRotationCache.mDragNormal,
+                                    mRotationCache.mDrag);
+  getSession().pop();
 }
 
 void ObjectNode::initialize(void)
@@ -814,6 +915,8 @@ void ObjectNode::receiveTransformPosReal64(void* user,
   if (!node)
     return;
 
+  // TODO: Add observer notifications.
+  
   if (position)
   {
     node->mTranslation.mPosition.set(position[0], position[1], position[2]);
@@ -836,13 +939,12 @@ void ObjectNode::receiveTransformPosReal64(void* user,
   {
     node->mTranslation.mDragNormal.set(dragNormal[0], dragNormal[1], dragNormal[2]);
     node->mTranslationCache.mDragNormal = node->mTranslation.mDragNormal;
-    node->mTranslation.mDrag = drag;
+    node->mTranslationCache.mDrag = node->mTranslation.mDrag = drag;
   }
 
-  node->mTranslation.mSeconds = seconds;
-  node->mTranslation.mFraction = fraction;
-
-  node->mTranslationCache = node->mTranslation;
+  node->mTranslationCache.mSeconds = node->mTranslation.mSeconds = seconds;
+  node->mTranslationCache.mFraction = node->mTranslation.mFraction = fraction;
+  node->updateDataVersion();
 }
 
 void ObjectNode::receiveTransformRotReal64(void* user,
@@ -861,6 +963,8 @@ void ObjectNode::receiveTransformRotReal64(void* user,
   if (!node)
     return;
 
+  // TODO: Add observer notifications.
+  
   if (rotation)
   {
     node->mRotation.mRotation = *rotation;
@@ -883,11 +987,12 @@ void ObjectNode::receiveTransformRotReal64(void* user,
   {
     node->mRotation.mDragNormal = *dragNormal;
     node->mRotationCache.mDragNormal = *dragNormal;
-    node->mRotation.mDrag = drag;
+    node->mRotationCache.mDrag = node->mRotation.mDrag = drag;
   }
 
-  node->mRotation.mSeconds = seconds;
-  node->mRotation.mFraction = fraction;
+  node->mRotationCache.mSeconds = node->mRotation.mSeconds = seconds;
+  node->mRotationCache.mFraction = node->mRotation.mFraction = fraction;
+  node->updateDataVersion();
 }
 
 void ObjectNode::receiveTransformScaleReal64(void* user,
@@ -902,7 +1007,17 @@ void ObjectNode::receiveTransformScaleReal64(void* user,
   if (!node)
     return;
 
-  node->mScale.set(scaleX, scaleY, scaleZ);
+  Vector3d scale(scaleX, scaleY, scaleZ);
+
+  const ObserverList& observers = node->getObservers();
+  for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+  {
+    if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
+      observer->onSetScale(*node, scale);
+  }
+
+  node->mScale = scale;
+  node->updateDataVersion();
 }
 
 void ObjectNode::receiveLightSet(void* user,
@@ -911,6 +1026,23 @@ void ObjectNode::receiveLightSet(void* user,
                                  real64 lightG,
                                  real64 lightB)
 {
+  Session* session = Session::getCurrent();
+
+  ObjectNode* node = dynamic_cast<ObjectNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  ColorRGB intensity(lightR, lightG, lightB);
+
+  const ObserverList& observers = node->getObservers();
+  for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+  {
+    if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
+      observer->onSetLightIntensity(*node, intensity);
+  }
+
+  node->mIntensity = intensity;
+  node->updateDataVersion();
 }
 
 void ObjectNode::receiveLinkSet(void* user,
@@ -918,7 +1050,7 @@ void ObjectNode::receiveLinkSet(void* user,
                                 uint16 linkID,
                                 VNodeID linkedNodeID,
                                 const char* name,
-                                uint32 targetID)
+                                uint32 targetNodeID)
 {
   Session* session = Session::getCurrent();
 
@@ -928,25 +1060,19 @@ void ObjectNode::receiveLinkSet(void* user,
 
   Link* link = node->getLinkByID(linkID);
   if (link)
+    link->receiveLinkSet(user, nodeID, linkID, linkedNodeID, name, targetNodeID);
+  else
   {
-    if (link->mName != name)
+    link = new Link(linkID, name, linkedNodeID, targetNodeID, *node);
+    node->mLinks.push_back(link);
+    node->updateStructureVersion();
+
+    const ObserverList& observers = node->getObservers();
+    for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     {
-      // TODO: Notify name change.
+      if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
+	observer->onCreateLink(*node, *link);
     }
-
-    // NOTE: This is bad. Don't do this.
-    receiveLinkDestroy(user, nodeID, linkID);
-  }
-
-  link = new Link(linkID, name, *node);
-  node->mLinks.push_back(link);
-  node->updateStructure();
-
-  const ObserverList& observers = node->getObservers();
-  for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-  {
-    if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
-      observer->onCreateLink(*node, *link);
   }
 }
 
@@ -965,8 +1091,8 @@ void ObjectNode::receiveLinkDestroy(void* user, VNodeID nodeID, uint16 linkID)
       // Notify link observers.
       {
         const Link::ObserverList& observers = (*link)->getObservers();
-        for (Link::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-          (*observer)->onDestroy(*(*link));
+        for (Link::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+          (*i)->onDestroy(*(*link));
       }
 
       // Notify node observers.
@@ -982,7 +1108,7 @@ void ObjectNode::receiveLinkDestroy(void* user, VNodeID nodeID, uint16 linkID)
       delete *link;
       node->mLinks.erase(link);
 
-      node->updateStructure();
+      node->updateStructureVersion();
       break;
     }
   }
@@ -999,18 +1125,23 @@ void ObjectNode::receiveMethodGroupCreate(void* user, VNodeID nodeID, uint16 gro
   MethodGroup* group = node->getMethodGroupByID(groupID);
   if (group)
   {
-    const MethodGroup::ObserverList& observers = group->getObservers();
-    for (MethodGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      (*i)->onSetName(*group, name);
-      
-    group->mName = name;
-    group->updateData();
+    if (group->getName() != name)
+    {
+      // TODO: Move this into MethodGroup.
+
+      const MethodGroup::ObserverList& observers = group->getObservers();
+      for (MethodGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*group, name);
+	
+      group->mName = name;
+      group->updateDataVersion();
+    }
   }
   else
   {
     group = new MethodGroup(groupID, name, *node);
     node->mGroups.push_back(group);
-    node->updateStructure();
+    node->updateStructureVersion();
     
     const ObserverList& observers = node->getObservers();
     for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -1056,7 +1187,7 @@ void ObjectNode::receiveMethodGroupDestroy(void* user, VNodeID nodeID, uint16 gr
       delete *group;
       groups.erase(group);
 
-      node->updateStructure();
+      node->updateStructureVersion();
       break;
     }
   }
@@ -1067,6 +1198,10 @@ void ObjectNode::receiveAnimRun(void* user, VNodeID nodeID, uint16 linkID, uint3
 }
 
 //---------------------------------------------------------------------
+
+void ObjectNodeObserver::onSetScale(ObjectNode& node, Vector3d& scale)
+{
+}
 
 void ObjectNodeObserver::onCreateMethodGroup(ObjectNode& node, MethodGroup& group)
 {
@@ -1081,6 +1216,10 @@ void ObjectNodeObserver::onCreateLink(ObjectNode& node, Link& link)
 }
 
 void ObjectNodeObserver::onDestroyLink(ObjectNode& node, Link& link)
+{
+}
+
+void ObjectNodeObserver::onSetLightIntensity(ObjectNode& node, const ColorRGB& color)
 {
 }
 

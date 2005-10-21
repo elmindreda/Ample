@@ -1,0 +1,26 @@
+Changes for Ample
+=================
+
+Version 0.3
+-----------
+
+2005-10-06
+ * Added getTagByNames to Node.
+ * Added getNodeByLinkName, isLight, getLightIntensity and setLightIntensity to ObjectNode.
+ * Added setLinkedNode, setTargetNode, setName, getLinkedNode and getTargetNode to Link.
+ * Added stub implementation of bitmap classes.
+ * Added onSetLinkedNode, onSetTargetNode and onSetName to LinkObserver.
+
+2005-10-14
+ * Made ObjectNode::Translation and ObjectNode::Rotation top-level classes.
+ * Added Bone and BoneObserver classes for geometry node bones.
+ * Finished implementation of Mehtod::call and its notification mechanism.
+ * Added onSetName to MethodObserver.
+ * Added state cacheing to Link.
+ * Added setTranslation and setRotation to ObjectNode.
+
+2005-10-15
+ * Renamed update* methods in Versioned.
+ * Added setName to Method.
+ * Implemented new methods and fixed bugs.
+

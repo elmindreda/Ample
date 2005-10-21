@@ -1,5 +1,8 @@
-
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
 // Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <algorithm>
 #include <string>
@@ -19,6 +22,9 @@ namespace verse
 
 const uint32 INVALID_VERTEX_ID = ((uint32) ~0);
 const uint32 INVALID_POLYGON_ID = ((uint32) ~0);
+
+const VLayerID BASE_VERTEX_LAYER_ID = 0;
+const VLayerID BASE_POLYGON_LAYER_ID = 0;
 
 //---------------------------------------------------------------------
 
@@ -50,6 +56,8 @@ class TextNodeObserver;
 
 class GeometryLayer;
 class GeometryLayerObserver;
+class Bone;
+class BoneObserver;
 class GeometryNode;
 class GeometryNodeObserver;
 
@@ -66,6 +74,11 @@ class BitmapLayer;
 class BitmapLayerObserver;
 class BitmapNode;
 class BitmapNodeObserver;
+
+class Fragment;
+class FragmentObserver;
+class MaterialNode;
+class MaterialNodeObserver;
 
 class Session;
 class SessionObserver;
@@ -120,7 +133,7 @@ public:
   void normalize(void);
   template <typename T>
   void rotateVector(Vector3<T>& vector) const;
-  float dotProduct(const Quaternion64& other) const;
+  real64 dotProduct(const Quaternion64& other) const;
   Quaternion64 interpolateTo(real64 t, const Quaternion64& other) const;
   Quaternion64 operator * (real64 value) const;
   Quaternion64 operator / (real64 value) const;
@@ -140,6 +153,34 @@ public:
   void getAxisRotation(Vector3<T>& axis, T& angle) const;
   template <typename T>
   void setAxisRotation(const Vector3<T>& axis, T angle);
+};
+
+//---------------------------------------------------------------------
+
+class Translation
+{
+public:
+  Vector3d mPosition;
+  Vector3d mSpeed;
+  Vector3d mAccel;
+  Vector3d mDragNormal;
+  uint32 mSeconds;
+  uint32 mFraction;
+  real64 mDrag; 
+};
+
+//---------------------------------------------------------------------
+
+class Rotation
+{
+public:
+  Quaternion64 mRotation;
+  Quaternion64 mSpeed;
+  Quaternion64 mAccel;
+  Quaternion64 mDragNormal;
+  uint32 mSeconds;
+  uint32 mFraction;
+  real64 mDrag;
 };
 
 //---------------------------------------------------------------------
@@ -304,6 +345,7 @@ class Versioned
   friend class GeometryLayer;
   friend class GeometryNode;
   friend class MethodGroup;
+  friend class Link;
   friend class ObjectNode;
   friend class Session;
 public:
@@ -319,8 +361,8 @@ public:
    */
   unsigned int getStructureVersion(void) const;
 private:
-  void updateData(void);
-  void updateStructure(void);
+  void updateDataVersion(void);
+  void updateStructureVersion(void);
   unsigned int mDataVersion;
   unsigned int mStructVersion;
 };
@@ -524,7 +566,6 @@ class Node : public Versioned, public Observable<NodeObserver>
 {
   friend class Session;
 public:
-  // enum Type { OBJECT, GEOMETRY, MATERIAL, BITMAP, TEXT, CURVE, AUDIO };
   /*! Destroys this node.
    *  @remarks This call is asynchronous. It will not take effect
    *  until, at the earliest, after the first subsequent call to
@@ -565,6 +606,16 @@ public:
   /*! @return The number of tag groups in this node.
    */
   unsigned int getTagGroupCount(void) const;
+  /*! @param groupName The name of the group of the desired tag.
+   *  @param tagName The name of the desired tag.
+   *  @return The tag with the specified name, in the specified group.
+   */
+  Tag* getTagByNames(const std::string& groupName, const std::string& tagName);
+  /*! @param groupName The name of the group of the desired tag.
+   *  @param tagName The name of the desired tag.
+   *  @return The tag with the specified name, in the specified group.
+   */
+  const Tag* getTagByNames(const std::string& groupName, const std::string& tagName) const;
   /*! @return @c true if this node was created from this client, otherwise @c false.
    */
   bool isMine(void) const;
@@ -956,6 +1007,42 @@ public:
 
 //---------------------------------------------------------------------
 
+class Bone : public Observable<BoneObserver>
+{
+public:
+  void destroy(void);
+  const Vector3d getPosition(void) const;
+  void setPosition(const Vector3d& position);
+  const Quaternion64 getRotation(void) const;
+  void setRotation(const Quaternion64& rotation);
+  const std::string& getCurveLabel(void) const;
+  void setCurveLabel(const std::string& label);
+  uint16 getID(void) const;
+private:
+  Bone(uint16 ID,
+       const std::string& weight,
+       const std::string& reference,
+       const Vector3d& position,
+       const Quaternion64& rotation,
+       const std::string& curveLabel);
+  uint16 mID;
+  std::string mWeight;
+  std::string mReference;
+  Vector3d mPosition;
+  Quaternion64 mRotation;
+  std::string mCurveLabel;
+};
+
+//---------------------------------------------------------------------
+
+class BoneObserver : public Observer<BoneObserver>
+{
+public:
+  virtual void onDestroy(Bone& bone);
+};
+
+//---------------------------------------------------------------------
+
 /*! Geometry node class. Represents a single geometry node.
  */
 class GeometryNode : public Node
@@ -1079,9 +1166,17 @@ public:
   /*! @return The highest currently valid vertex ID.
    */
   uint32 getHighestVertexID(void) const;
+  /*! @return The lowest available vertex ID.
+   *  @remarks This isn't updated by local vertex creation requests.
+   */
+  uint32 getFirstFreeVertexID(void) const;
   /*! @return The highest currently valid polygon ID.
    */
   uint32 getHighestPolygonID(void) const;
+  /*! @return The lowest available polygon ID.
+   *  @remarks This isn't updated by local polygon creation requests.
+   */
+  uint32 getFirstFreePolygonID(void) const;
   /*! @return The number of valid vertices.
    */
   uint32 getVertexCount(void) const;
@@ -1098,6 +1193,8 @@ private:
   static void receiveCreaseSetEdge(void* user, VNodeID nodeID, const char *layer, uint32 def_crease);
   static void receiveBoneCreate(void* user, VNodeID nodeID, uint16 bone_id, const char *weight, const char *reference, uint32 parent, real64 pos_x, real64 pos_y, real64 pos_z, real64 rot_x, real64 rot_y, real64 rot_z, real64 rot_w);
   static void receiveBoneDestroy(void* user, VNodeID nodeID, uint16 bone_id);
+  static void receiveVertexDeleteReal32(void* user, VNodeID nodeID, uint32 vertexID);
+  static void receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 vertexID);
   typedef std::vector<bool> ValidityMap;
   typedef std::vector<GeometryLayer*> LayerList;
   typedef std::map<uint32,uint32> VertexIndexMap;
@@ -1112,6 +1209,8 @@ private:
   uint32 mEdgeDefaultCrease;
   uint32 mHighestVertexID;
   uint32 mHighestPolygonID;
+  uint32 mFirstFreeVertexID;
+  uint32 mFirstFreePolygonID;
   uint32 mVertexCount;
   uint32 mPolygonCount;
 };
@@ -1191,7 +1290,7 @@ typedef std::vector<VNOParam> MethodArgumentList;
 
 /*! Object method. Represents a single method in an object node.
  */
-class Method : public Observable<MethodObserver>
+class Method : public Versioned, public Observable<MethodObserver>
 {
   friend class MethodGroup;
 public:
@@ -1213,6 +1312,7 @@ public:
   /*! @return The name of this object method.
    */
   const std::string& getName(void) const;
+  void setName(const std::string& name);
   /*! @return The number of parameters for this method.
    */
   uint8 getParamCount(void) const;
@@ -1247,6 +1347,7 @@ public:
    *  @param arguments The arguments passed to the called method.
    */
   virtual void onCall(Method& method, const MethodArgumentList& arguments);  
+  virtual void onSetName(Method& method, const std::string& name);
   /*! Called before an observed method is destroyed.
    *  @param method The method to be destroyed.
    */
@@ -1372,21 +1473,40 @@ public:
   /*! @return The ID of the node that this node link points to.
    */
   VNodeID getLinkedNodeID(void) const;
-  /*! @return The ID of who knows.
+  /*! @return The node that this link points to, or @c NULL if the node
+   *  doesn't exist.
+   */
+  Node* getLinkedNode(void) const;
+  void setLinkedNode(VNodeID nodeID);
+  /*! @return The ID of "who knows".
    */
   VNodeID getTargetNodeID(void) const;
+  /*! @return The "who knows" that this link points to, or @c NULL if
+   *  the node doesn't exist.
+   */
+  Node* getTargetNode(void) const;
+  void setTargetNode(VNodeID nodeID);
   /*! @return The name of this node.
    */
   const std::string& getName(void) const;
+  void setName(const std::string& name);
   /*! @return The node containing this node link.
    */
   ObjectNode& getNode(void) const;
 private:
-  Link(uint16 ID, const std::string& name, ObjectNode& node);
-  VNodeID mNodeID;
-  VNodeID mTargetID;
+  Link(uint16 ID, const std::string& name, VNodeID nodeID, VNodeID targetID, ObjectNode& node);
+  void sendData(void);
+  void receiveLinkSet(void* user, VNodeID nodeID, uint16 linkID, VNodeID linkedNodeID, const char* name, uint32 targetNodeID);
+  class Data
+  {
+  public:
+    VNodeID mNodeID;
+    VNodeID mTargetID;
+    std::string mName;
+  };
+  Data mState;
+  Data mCache;
   uint16 mID;
-  std::string mName;
   ObjectNode& mNode;
 };
 
@@ -1395,12 +1515,13 @@ private:
 class LinkObserver : public Observer<LinkObserver>
 {
 public:
+  virtual void onSetLinkedNode(Link& link, VNodeID nodeID);
+  virtual void onSetTargetNode(Link& link, VNodeID targetID);
+  virtual void onSetName(Link& link, const std::string name);
   virtual void onDestroy(Link& link);
 };
 
 //---------------------------------------------------------------------
-
-// NOTE: Not finished.
 
 /*! Object node class. Represents a single object node.
  */
@@ -1424,6 +1545,17 @@ public:
    *  Session::update.
    */
   void createLink(const std::string& name, VNodeID nodeID, VNodeID targetID = (VNodeID) ~0);
+  /*! @return @c true if this object node emits light, otherwise @c false.
+   *  @remarks This is a helper method and not strictly neccessary.
+   */
+  bool isLight(void) const;
+  /*! Sets the light intensity of this object node. If set to non-zero,
+   * this object node becomes a light source.
+   */
+  void setLightIntensity(const ColorRGB& intensity);
+  /*! @return The light intensity of this object node.
+   */
+  const ColorRGB& getLightIntensity(void) const;
   /*! @param groupID The ID of the desired method group.
    *  @return The method group with the specified ID, or @c NULL if no such method group exists.
    */
@@ -1478,6 +1610,12 @@ public:
   /*! @return The number of links in this node.
    */
   unsigned int getLinkCount(void) const;
+  /*! @param name The name of the link to return the node of.
+   *  @return The node pointed to by the link with the specified name.
+   */
+  Node* getNodeByLinkName(const std::string& name) const;
+  void setTranslation(const Translation& translation);
+  void setRotation(const Rotation& rotation);
   /*! @return The current position of this object node.
    */
   const Vector3d& getPosition(void) const;
@@ -1530,28 +1668,10 @@ public:
    */
   void setScale(const Vector3d& scale);
 private:
-  struct Translation
-  {
-    Vector3d mPosition;
-    Vector3d mSpeed;
-    Vector3d mAccel;
-    Vector3d mDragNormal;
-    uint32 mSeconds;
-    uint32 mFraction;
-    real64 mDrag; 
-  };
-  struct Rotation
-  {
-    Quaternion64 mRotation;
-    Quaternion64 mSpeed;
-    Quaternion64 mAccel;
-    Quaternion64 mDragNormal;
-    uint32 mSeconds;
-    uint32 mFraction;
-    real64 mDrag;
-  };
   ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~ObjectNode(void);
+  void sendTranslation(void);
+  void sendRotation(void);
   static void initialize(void);
   static void receiveTransformPosReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const real32* pos, const real32* speed, const real32* accelerate, const real32* dragNormal, real32 drag);
   static void receiveTransformRotReal32(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat32* rot, const VNQuat32* speed, const VNQuat32* accelerate, const VNQuat32* dragNormal, real32 drag);
@@ -1560,7 +1680,7 @@ private:
   static void receiveTransformRotReal64(void* user, VNodeID nodeID, uint32 seconds, uint32 fraction, const VNQuat64* rot, const VNQuat64* speed, const VNQuat64* accelerate, const VNQuat64* dragNormal, real64 drag);
   static void receiveTransformScaleReal64(void* user, VNodeID nodeID, real64 scaleX, real64 scaleY, real64 scaleZ);
   static void receiveLightSet(void* user, VNodeID nodeID, real64 lightR, real64 lightG, real64 lightB);
-  static void receiveLinkSet(void* user, VNodeID nodeID, uint16 linkID, VNodeID linkedNodeID, const char* name, uint32 targetID);
+  static void receiveLinkSet(void* user, VNodeID nodeID, uint16 linkID, VNodeID linkedNodeID, const char* name, uint32 targetNodeID);
   static void receiveLinkDestroy(void* user, VNodeID nodeID, uint16 linkID);
   static void receiveMethodGroupCreate(void* user, VNodeID nodeID, uint16 groupID, const char* name);
   static void receiveMethodGroupDestroy(void* user, VNodeID nodeID, uint16 groupID);
@@ -1574,11 +1694,10 @@ private:
   Rotation mRotation;
   Rotation mRotationCache;
   Vector3d mScale;
+  ColorRGB mIntensity;
 };
 
 //---------------------------------------------------------------------
-
-// NOTE: Not finished.
 
 /*! Observer interface for object nodes.
  */
@@ -1595,21 +1714,31 @@ public:
    *  @param group The method group to be destroyed.
    */
   virtual void onDestroyMethodGroup(ObjectNode& node, MethodGroup& group);
+  /*! Called after a new link is created in an observed object node.
+   *  @param node The observed object node.
+   *  @param link The newly created link.
+   */
   virtual void onCreateLink(ObjectNode& node, Link& link);
+  /*! Called before a link is destroyed in an observed object node.
+   *  @param node The observed object node.
+   *  @param link The link to be destroyed.
+   */
   virtual void onDestroyLink(ObjectNode& node, Link& link);
+  virtual void onSetScale(ObjectNode& node, Vector3d& scale);
+  virtual void onSetLightIntensity(ObjectNode& node, const ColorRGB& color);
 };
 
 //---------------------------------------------------------------------
 
-// NOTE: Not finished.
-
+/*! @remarks Not finished.
+ */
 class BitmapLayer : public Observable<BitmapLayerObserver>
 {
   friend class BitmapNode;
 public:
   void destroy(void);
   VLayerID getID(void) const;
-  std::string& getName(void) const;
+  const std::string& getName(void) const;
   BitmapNode& getNode(void) const;
 private:
   BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node);
@@ -1620,8 +1749,8 @@ private:
 
 //---------------------------------------------------------------------
 
-// NOTE: Not finished.
-
+/*! @remarks Not finished.
+ */
 class BitmapLayerObserver : public Observer<BitmapLayerObserver>
 {
 public:
@@ -1631,13 +1760,12 @@ public:
 
 //---------------------------------------------------------------------
 
-// NOTE: Not finished.
-
+/*! @remarks Not finished.
+ */
 class BitmapNode : public Node
 {
   friend class Session;
 public:
-  void destroy(void);
   /*! @param ID The ID of the desired bitmap layer.
    *  @return The bitmap layer with the specified ID, or @c NULL if no such bitmap layer exists.
    */
@@ -1662,27 +1790,119 @@ public:
    *  @return The bitmap layer with the specified name, or @c NULL if no such bitmap layer exists.
    */
   const BitmapLayer* getLayerByName(const std::string& name) const;
+  uint16 getLayerCount(void) const;
   void setDimensions(uint16 width, uint16 height, uint16 depth = 1);
   uint16 getWidth(void) const;
   uint16 getHeight(void) const;
   uint16 getDepth(void) const;
 private:
-  BitmapNode(void);
+  BitmapNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  ~BitmapNode(void);
   static void initialize(void);
   static void receiveDimensionsSet(void* user, VNodeID nodeID, uint16 width, uint16 height, uint16 depth);
   static void receiveLayerCreate(void* user, VNodeID nodeID, VLayerID layerID, const char* name, VNBLayerType type);
   static void receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerID);
+  typedef std::vector<BitmapLayer*> LayerList;
+  LayerList mLayers;
+  uint16 mWidth;
+  uint16 mHeight;
+  uint16 mDepth;
 };
 
 //---------------------------------------------------------------------
 
-// NOTE: Not finished.
-
+/*! @remarks Not finished.
+ */
 class BitmapNodeObserver : public NodeObserver
 {
 public:
+  virtual void onSetDimensions(BitmapNode& node, uint16 width, uint16 height, uint16 depth);
   virtual void onCreateLayer(BitmapNode& node, BitmapLayer& layer);
   virtual void onDestroyLayer(BitmapNode& node, BitmapLayer& layer);
+};
+
+//---------------------------------------------------------------------
+
+/*! @remarks Not finished.
+ */
+class Fragment : public Versioned, public Observable<FragmentObserver>
+{
+  friend class MaterialNode;
+public:
+  void destroy(void);
+  VNMFragmentID getID(void) const;
+private:
+  Fragment(VNMFragmentID ID);
+};
+
+//---------------------------------------------------------------------
+
+/*! @remarks Not finished.
+ */
+class FragmentObserver : public Observer<FragmentObserver>
+{
+public:
+  virtual void onDestroy(Fragment& fragment);
+};
+
+//---------------------------------------------------------------------
+
+/*! @remarks Not finished.
+ */
+class MaterialNode : public Node
+{
+  friend class Session;
+public:
+  /*! @param ID The ID of the desired material fragment.
+   *  @return The material fragment with the specified ID, or @c NULL
+   *  if no such material fragment exists.
+   */
+  Fragment* getFragmentByID(VNMFragmentID ID);
+  /*! @param ID The ID of the desired material fragment.
+   *  @return The material fragment with the specified ID, or @c NULL
+   *  if no such material fragment exists.
+   */
+  const Fragment* getFragmentByID(VNMFragmentID ID) const;
+  /*! @param index The index of the desired material fragment.
+   *  @return The material fragment at the specified index, or @c NULL
+   *  if no such material fragment exists.
+   */
+  Fragment* getFragmentByIndex(unsigned int index);
+  /*! @param index The index of the desired material fragment.
+   *  @return The material fragment at the specified index, or @c NULL
+   *  if no such material fragment exists.
+   */
+  const Fragment* getFragmentByIndex(unsigned int index) const;
+  /*! @param name The name of the desired material fragment
+   *  @return The material fragment with the specified name, or @c NULL
+   *  if no such material fragment exists.
+   */
+  Fragment* getFragmentByName(const std::string& name);
+  /*! @param name The name of the desired material fragment
+   *  @return The material fragment with the specified name, or @c NULL
+   *  if no such material fragment exists.
+   */
+  const Fragment* getFragmentByName(const std::string& name) const;
+  /*! @return The number of fragments in this material node.
+   */
+  uint16 getFragmentCount(void) const;
+private:
+  MaterialNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  ~MaterialNode(void);
+  static void initialize(void);
+  typedef std::vector<Fragment*> FragmentList;
+  FragmentList mFragments;
+};
+
+//---------------------------------------------------------------------
+
+/*! @remarks Not finished.
+ */
+class MaterialNodeObserver : public NodeObserver
+{
+public:
+  virtual void onCreateFragment(MaterialNode& node, Fragment& fragment);
+  virtual void onDestroyFragment(MaterialNode& node, Fragment& fragment);
 };
 
 //---------------------------------------------------------------------

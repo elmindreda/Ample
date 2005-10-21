@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -295,12 +300,12 @@ unsigned int Versioned::getStructureVersion(void) const
   return mStructVersion;
 }
 
-void Versioned::updateData(void)
+void Versioned::updateDataVersion(void)
 {
   mDataVersion++;
 }
 
-void Versioned::updateStructure(void)
+void Versioned::updateStructureVersion(void)
 {
   mStructVersion++;
   mDataVersion++;

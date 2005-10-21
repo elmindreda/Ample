@@ -2,29 +2,32 @@ Simple C++ retained mode library for Verse
 Copyright (c) PDC, KTH
 
 Audio node
-* Basic design.
-* Everything else.
+ * Basic design.
+ * Everything else.
+
+Basic node
+ * Use enum for node type.
 
 Bitmap node
-* Basic implementation.
-* Lots of layer code.
+ * Basic implementation.
+ * Lots of layer code.
 
 Curve node
-* Basic design.
-* Everything else.
+ * Basic design.
+ * Everything else.
 
 Geometry node
-* Bone support.
+ * Bone support.
 
 Material node
-* Basic design.
-* Everything else.
+ * Basic design.
+ * Everything else.
 
 Object node
-* Method argument pack/unpack code.
-* Method observer call notification.
-* Transform change notifications.
+ * Method argument pack/unpack code.
+ * Method observer call notification.
+ * Transform change notifications.
 
 Text node
-* Nothing right now.
+ * Nothing right now.
 

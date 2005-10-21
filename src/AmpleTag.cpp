@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -253,13 +258,13 @@ void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 t
     tag->mName = name;
     tag->mType = type;
     tag->mValue = *value;
-    tag->updateData();
+    tag->updateDataVersion();
   }
   else
   {
     tag = new Tag(tagID, name, type, *value, *group);
     group->mTags.push_back(tag);
-    group->updateStructure();
+    group->updateStructureVersion();
 
     const TagGroup::ObserverList& observers = group->getObservers();
     for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -301,7 +306,7 @@ void TagGroup::receiveTagDestroy(void* user, VNodeID ID, uint16 groupID, uint16 
       delete *tag;
       tags.erase(tag);
 
-      group->updateStructure();
+      group->updateStructureVersion();
       break;
     }
   }

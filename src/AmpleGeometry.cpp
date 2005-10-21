@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -283,6 +288,8 @@ void GeometryLayer::reserve(size_t slotCount)
   if (slotCount <= mData.getItemCount())
     return;
 
+  // TODO: Sanity checks?
+
   size_t baseCount = mData.getItemCount();
 
   mData.reserve(slotCount);
@@ -298,7 +305,7 @@ void GeometryLayer::reserve(size_t slotCount)
 	copySlot(targetSlot->real,
 		 (real64*) NULL,
 		 getTypeElementCount(mType),
-		 ((getID() == 0) ? V_REAL64_MAX : mDefaultReal),
+		 ((getID() == BASE_VERTEX_LAYER_ID) ? V_REAL64_MAX : mDefaultReal),
 		 true);
 	break;
       }
@@ -322,7 +329,7 @@ void GeometryLayer::reserve(size_t slotCount)
 	copySlot(targetSlot->uint,
 		 (uint32*) NULL,
 		 getTypeElementCount(mType),
-		 ((getID() == 1) ? INVALID_VERTEX_ID : mDefaultInt),
+		 ((getID() == BASE_POLYGON_LAYER_ID) ? INVALID_VERTEX_ID : mDefaultInt),
 		 true);
 	break;
       }
@@ -432,10 +439,12 @@ void GeometryLayer::initialize(void)
 
 void GeometryLayer::receiveVertexSetXyzReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 x, real32 y, real32 z)
 {
+  // TODO: Support 32-bit layers.
 }
 
 void GeometryLayer::receiveVertexDeleteReal32(void* user, VNodeID nodeID, uint32 vertexID)
 {
+  // TODO: Support 32-bit layers.
 }
 
 void GeometryLayer::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real64 x, real64 y, real64 z)
@@ -456,7 +465,7 @@ void GeometryLayer::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayer
   for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onSetSlot(*layer, vertexID, &vertex);
 
-  bool created = (layerID == 0 && !node->isVertex(vertexID));
+  bool created = (layerID == BASE_VERTEX_LAYER_ID && !node->isVertex(vertexID));
 
   if (!created)
   {
@@ -481,7 +490,19 @@ void GeometryLayer::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayer
     if (node->mHighestVertexID == INVALID_VERTEX_ID || vertexID > node->mHighestVertexID)
       node->mHighestVertexID = vertexID;
 
-    layer->updateStructure();
+    if (vertexID == node->mFirstFreeVertexID)
+    {
+      for (uint32 i = vertexID;  i <= node->mHighestVertexID;  i++)
+      {
+	if (!node->isVertex(i))
+	{
+	  node->mFirstFreeVertexID = i;
+	  break;
+	}
+      }
+    }
+
+    layer->updateStructureVersion();
 
     const GeometryNode::ObserverList& observers = node->getObservers();
     for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -489,9 +510,18 @@ void GeometryLayer::receiveVertexSetXyzReal64(void* user, VNodeID nodeID, VLayer
       if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*i))
 	observer->onCreateVertex(*node, vertexID, vertex);
     }
+  
+    for (uint32 polygonID = 0;  polygonID < node->mHighestPolygonID;  polygonID++)
+    {
+      // TODO: Implement.
+      // for each polygon
+      //   if polygon is invalid
+      //     if polygon becomes valid by this vertex creation
+      //       notify node observers of polygon creation
+    }
   }
   else
-    layer->updateData();
+    layer->updateDataVersion();
 }
 
 void GeometryLayer::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32 vertexID)
@@ -506,6 +536,37 @@ void GeometryLayer::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32
   if (!vertex || !vertex->isValid())
     return;
 
+  // TODO: Add polygon change notification. (quad to triangle or back)
+  // NOTE: This piece of code is a good argument for cacheing the
+  // polygon validity state.
+
+  for (uint32 polygonID = 0;  polygonID < node->mHighestPolygonID;  polygonID++)
+  {
+    BasePolygon polygon;
+    if (node->getBasePolygon(polygonID, polygon))
+    {
+      for (unsigned int i = 0;  i < 4;  i++)
+      {
+	if (polygon.mIndices[i] == vertexID)
+	{
+	  const GeometryNode::ObserverList& observers = node->getObservers();
+	  for (GeometryNode::ObserverList::const_iterator j = observers.begin();  j != observers.end();  i++)
+	  {
+	    if (GeometryNodeObserver* observer = dynamic_cast<GeometryNodeObserver*>(*j))
+	    {
+	      if (i < 3)
+		observer->onDeletePolygon(*node, polygonID);
+	      else
+		observer->onChangeBasePolygon(*node, polygonID, polygon);
+	    }
+	  }
+
+	  break;
+	}
+      }
+    }
+  }
+  
   const GeometryNode::ObserverList& observers = node->getObservers();
   for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
   {
@@ -533,8 +594,11 @@ void GeometryLayer::receiveVertexDeleteReal64(void* user, VNodeID nodeID, uint32
       node->mHighestVertexID = INVALID_VERTEX_ID;
   }
 
+  if (vertexID < node->mFirstFreeVertexID)
+    node->mFirstFreeVertexID = vertexID;
+
   node->mVertexCount--;
-  node->mBaseVertexLayer->updateStructure();
+  node->mBaseVertexLayer->updateStructureVersion();
 }
 
 void GeometryLayer::receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, uint32 value)
@@ -554,7 +618,7 @@ void GeometryLayer::receiveVertexSetUint32(void* user, VNodeID nodeID, VLayerID 
     (*i)->onSetSlot(*layer, vertexID, &value);
 
   layer->reserve(vertexID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
   targetSlot.uint[0] = value;
@@ -577,7 +641,7 @@ void GeometryLayer::receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID 
     (*i)->onSetSlot(*layer, vertexID, &value);
 
   layer->reserve(vertexID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(vertexID));
   targetSlot.real[0] = value;
@@ -585,6 +649,7 @@ void GeometryLayer::receiveVertexSetReal64(void* user, VNodeID nodeID, VLayerID 
 
 void GeometryLayer::receiveVertexSetReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 vertexID, real32 value)
 {
+  // TODO: Support 32-bit layers.
 }
 
 void GeometryLayer::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint32 v0, uint32 v1, uint32 v2, uint32 v3)
@@ -605,7 +670,21 @@ void GeometryLayer::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VL
   for (GeometryLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onSetSlot(*layer, polygonID, &polygon);
 
-  bool created = (layerID == 1 && !node->isPolygon(polygonID));
+  bool created = (layerID == BASE_POLYGON_LAYER_ID && !node->isPolygon(polygonID));
+
+  if (created)
+  {
+    // Check if the new polygon really is valid.
+
+    for (uint32 i = 0;  i < 3;  i++)
+    {
+      if (!node->isVertex(polygon.mIndices[i]))
+      {
+	created = false;
+	break;
+      }
+    }
+  }
 
   if (!created)
   {
@@ -628,7 +707,19 @@ void GeometryLayer::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VL
     if (node->mHighestPolygonID == INVALID_POLYGON_ID || polygonID > node->mHighestPolygonID)
       node->mHighestPolygonID = polygonID;
 
-    layer->updateStructure();
+    if (polygonID == node->mFirstFreePolygonID)
+    {
+      for (uint32 i = polygonID;  i <= node->mHighestPolygonID;  i++)
+      {
+	if (!node->isPolygon(i))
+	{
+	  node->mFirstFreePolygonID = i;
+	  break;
+	}
+      }
+    }
+
+    layer->updateStructureVersion();
 
     const GeometryNode::ObserverList& observers = node->getObservers();
     for (GeometryNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -638,7 +729,7 @@ void GeometryLayer::receivePolygonSetCornerUint32(void* user, VNodeID nodeID, VL
     }
   }
   else
-    layer->updateData();
+    layer->updateDataVersion();
 }
 
 void GeometryLayer::receivePolygonDelete(void* user, VNodeID nodeID, uint32 polygonID)
@@ -680,8 +771,11 @@ void GeometryLayer::receivePolygonDelete(void* user, VNodeID nodeID, uint32 poly
       node->mHighestPolygonID = INVALID_POLYGON_ID;
   }
 
+  if (polygonID < node->mFirstFreePolygonID)
+    node->mFirstFreePolygonID = polygonID;
+
   node->mPolygonCount--;
-  node->mBasePolygonLayer->updateStructure();
+  node->mBasePolygonLayer->updateStructureVersion();
 }
 
 void GeometryLayer::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real64 v0, real64 v1, real64 v2, real64 v3)
@@ -707,7 +801,7 @@ void GeometryLayer::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VL
     (*i)->onSetSlot(*layer, polygonID, &sourceSlot);
 
   layer->reserve(polygonID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
   copySlot(targetSlot.real, sourceSlot.real, 4);
@@ -715,6 +809,7 @@ void GeometryLayer::receivePolygonSetCornerReal64(void* user, VNodeID nodeID, VL
 
 void GeometryLayer::receivePolygonSetCornerReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 v0, real32 v1, real32 v2, real32 v3)
 {
+  // TODO: Support 32-bit layers.
 }
 
 void GeometryLayer::receivePolygonSetFaceUint8(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, uint8 value)
@@ -734,7 +829,7 @@ void GeometryLayer::receivePolygonSetFaceUint8(void* user, VNodeID nodeID, VLaye
     (*i)->onSetSlot(*layer, polygonID, &value);
 
   layer->reserve(polygonID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
   targetSlot.byte[0] = value;
@@ -757,7 +852,7 @@ void GeometryLayer::receivePolygonSetFaceUint32(void* user, VNodeID nodeID, VLay
     (*i)->onSetSlot(*layer, polygonID, &value);
 
   layer->reserve(polygonID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
   targetSlot.uint[0] = value;
@@ -780,7 +875,7 @@ void GeometryLayer::receivePolygonSetFaceReal64(void* user, VNodeID nodeID, VLay
     (*i)->onSetSlot(*layer, polygonID, &value);
 
   layer->reserve(polygonID + 1);
-  layer->updateData();
+  layer->updateDataVersion();
 
   Slot& targetSlot = *reinterpret_cast<Slot*>(layer->mData.getItem(polygonID));
   targetSlot.real[0] = value;
@@ -788,6 +883,7 @@ void GeometryLayer::receivePolygonSetFaceReal64(void* user, VNodeID nodeID, VLay
 
 void GeometryLayer::receivePolygonSetFaceReal32(void* user, VNodeID nodeID, VLayerID layerID, uint32 polygonID, real32 value)
 {
+  // TODO: Support 32-bit layers.
 }
 
 //---------------------------------------------------------------------
@@ -1075,9 +1171,19 @@ uint32 GeometryNode::getHighestVertexID(void) const
   return mHighestVertexID;
 }
 
+uint32 GeometryNode::getFirstFreeVertexID(void) const
+{
+  return mFirstFreeVertexID;
+}
+
 uint32 GeometryNode::getHighestPolygonID(void) const
 {
   return mHighestPolygonID;
+}
+
+uint32 GeometryNode::getFirstFreePolygonID(void) const
+{
+  return mFirstFreePolygonID;
 }
 
 uint32 GeometryNode::getVertexCount(void) const
@@ -1098,6 +1204,8 @@ GeometryNode::GeometryNode(VNodeID ID, VNodeOwner owner, Session& session):
   mEdgeDefaultCrease(0),
   mHighestVertexID(INVALID_VERTEX_ID),
   mHighestPolygonID(INVALID_POLYGON_ID),
+  mFirstFreeVertexID(0),
+  mFirstFreePolygonID(0),
   mVertexCount(0),
   mPolygonCount(0)
 {
@@ -1161,7 +1269,7 @@ void GeometryNode::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID l
       layer->mDefaultInt = defaultInt;
       layer->mDefaultReal = defaultReal;
       layer->mName = name;
-      layer->updateData();
+      layer->updateDataVersion();
     }
     else
     {
@@ -1181,11 +1289,11 @@ void GeometryNode::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID l
 
     layer = new GeometryLayer(layerID, name, type, *node, defaultInt, defaultReal);
     node->mLayers.push_back(layer);
-    node->updateStructure();
+    node->updateStructureVersion();
 
-    if (layer->getID() == 0)
+    if (layer->getID() == BASE_VERTEX_LAYER_ID)
       node->mBaseVertexLayer = layer;
-    else if (layer->getID() == 1)
+    else if (layer->getID() == BASE_POLYGON_LAYER_ID)
       node->mBasePolygonLayer = layer;
 
     const Node::ObserverList& observers = node->getObservers();
@@ -1195,6 +1303,7 @@ void GeometryNode::receiveGeometryLayerCreate(void* data, VNodeID ID, VLayerID l
 	observer->onCreateLayer(*node, *layer);
     }
 
+    // TODO: Make this a user setting.
     verse_send_g_layer_subscribe(ID, layerID, VN_FORMAT_REAL64);
   }
 }
@@ -1230,7 +1339,7 @@ void GeometryNode::receiveGeometryLayerDestroy(void* data, VNodeID ID, VLayerID 
       delete *layer;
       layers.erase(layer);
 
-      node->updateStructure();
+      node->updateStructureVersion();
       break;
     }
   }

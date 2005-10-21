@@ -20,7 +20,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onSetName(Tag& tag, const std::string name)
   {
-    printf("Changed name of tag %s(%u) of group %s(%u) node %u (%s) to %s\n",
+    printf("Changed name of tag %s(%u) in group %s(%u) of node %u (%s) to %s\n",
            tag.getName().c_str(),
            tag.getID(),
 	   tag.getGroup().getName().c_str(),
@@ -32,7 +32,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(Tag& tag)
   {
-    printf("Destroyed tag %s(%u) of group %s(%u) node %u (%s) (duplicate)\n",
+    printf("Destroyed tag %s(%u) in group %s(%u) node %u (%s) (duplicate message)\n",
            tag.getName().c_str(),
            tag.getID(),
 	   tag.getGroup().getName().c_str(),
@@ -67,7 +67,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onSetName(TagGroup& group, const std::string& name)
   {
-    printf("Changed name of group %s(%u) of node %u (%s) to %s\n",
+    printf("Changed name in group %s(%u) of node %u (%s) to %s\n",
 	   group.getName().c_str(),
 	   group.getID(),
 	   group.getNode().getID(),
@@ -77,7 +77,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(TagGroup& group)
   {
-    printf("Destroyed tag group %s(%u) node %u (%s) (duplicate)\n",
+    printf("Destroyed tag group %s(%u) node %u (%s) (duplicate message)\n",
 	   group.getName().c_str(),
 	   group.getID(),
 	   group.getNode().getID(),
@@ -114,7 +114,7 @@ class NodeListener : public TagObserver, public TagGroupObserver, public NodeObs
 
   void onDestroy(Node& node)
   {
-    printf("Destroyed node %u (%s) (duplicate)\n",
+    printf("Destroyed node %u (%s) (duplicate message)\n",
 	   node.getID(),
 	   node.getName().c_str());
   }
@@ -148,7 +148,7 @@ class TextListener : public TextBufferObserver, public TextNodeObserver
 
   void onDestroy(TextBuffer& buffer)
   {
-    printf("Destroyed text buffer %s(%u) in text node %u (%s) (duplicate)\n",
+    printf("Destroyed text buffer %s(%u) in text node %u (%s) (duplicate message)\n",
 	   buffer.getName().c_str(),
 	   buffer.getID(),
 	   buffer.getNode().getID(),
@@ -210,7 +210,7 @@ class GeometryListener : public GeometryLayerObserver, public GeometryNodeObserv
 
   void onDestroy(GeometryLayer& layer)
   {
-    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s) (duplicate)\n",
+    printf("Destroyed geometry layer %s(%u) of in geometry node %u (%s) (duplicate message)\n",
            layer.getName().c_str(),
 	   layer.getID(),
 	   layer.getNode().getID(),
@@ -316,11 +316,18 @@ class ObjectListener : public ObjectNodeObserver,
 
   void onCreateLink(ObjectNode& node, Link& link)
   {
-    printf("Created link %s(%u) of in object node %u (%s)\n",
+    const Node* linkedNode = Session::getCurrent()->getNodeByID(link.getLinkedNodeID());
+    const Node* targetNode = Session::getCurrent()->getNodeByID(link.getTargetNodeID());
+
+    printf("Created link %s(%u) in object node %u (%s) to node %u (%s) target %u (%s)\n",
            link.getName().c_str(),
 	   link.getID(),
 	   node.getID(),
-	   node.getName().c_str());
+	   node.getName().c_str(),
+	   link.getLinkedNodeID(),
+	   linkedNode ? linkedNode->getName().c_str() : "",
+	   link.getTargetNodeID(),
+	   targetNode ? targetNode->getName().c_str() : "");
 
     link.addObserver(*this);
   }
@@ -334,9 +341,59 @@ class ObjectListener : public ObjectNodeObserver,
 	   node.getName().c_str());
   }
 
+  void onSetScale(ObjectNode& node, Vector3d& scale)
+  {
+    printf("Set scale of object node %u (%s)\n",
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onSetLightIntensity(ObjectNode& node, const ColorRGB& color)
+  {
+    printf("Set light intensity of object node %u (%s)\n",
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onSetLinkedNode(Link& link, VNodeID nodeID)
+  {
+    const Node* node = Session::getCurrent()->getNodeByID(nodeID);
+
+    printf("Changed linked node in link %s(%u) in object node %u (%s) to %u (%s)\n",
+           link.getName().c_str(),
+	   link.getID(),
+	   link.getNode().getID(),
+	   link.getNode().getName().c_str(),
+	   nodeID,
+	   node ? node->getName().c_str() : "");
+  }
+
+  void onSetTargetNode(Link& link, VNodeID targetID)
+  {
+    const Node* node = Session::getCurrent()->getNodeByID(targetID);
+
+    printf("Changed target node in link %s(%u) in object node %u (%s) to %u (%s)\n",
+           link.getName().c_str(),
+	   link.getID(),
+	   link.getNode().getID(),
+	   link.getNode().getName().c_str(),
+	   targetID,
+	   node ? node->getName().c_str() : "");
+  }
+
+  void onSetName(Link& link, const std::string name)
+  {
+    printf("Changed name of link %s(%u) of object node %u (%s) to %s\n",
+	   link.getName().c_str(),
+	   link.getID(),
+	   link.getNode().getID(),
+	   link.getNode().getName().c_str(),
+	   name.c_str());
+  }
+
   void onDestroy(Link& link)
   {
-    printf("Destroyed link %s(%u) in object node %u (%s) (duplicate)\n",
+    printf("Destroyed link %s(%u) in object node %u (%s) (duplicate message)\n",
            link.getName().c_str(),
 	   link.getID(),
 	   link.getNode().getID(),
@@ -379,7 +436,7 @@ class ObjectListener : public ObjectNodeObserver,
 
   void onDestroy(MethodGroup& group)
   {
-    printf("Destroyed method group %s(%u) of object node %u (%s) (duplicate)\n",
+    printf("Destroyed method group %s(%u) of object node %u (%s) (duplicate message)\n",
 	   group.getName().c_str(),
 	   group.getID(),
 	   group.getNode().getID(),
@@ -388,11 +445,30 @@ class ObjectListener : public ObjectNodeObserver,
 
   void onCall(Method& method, const MethodArgumentList& arguments)
   {
+    printf("Called method %s(%u) of method group %s(%u) of object node %u (%s)\n",
+           method.getName().c_str(),
+           method.getID(),
+	   method.getGroup().getName().c_str(),
+	   method.getGroup().getID(),
+	   method.getGroup().getNode().getID(),
+	   method.getGroup().getNode().getName().c_str());
+  }
+
+  void onSetName(Method& method, const std::string& name)
+  {
+    printf("Changed name of method %s(%u) of method group %s(%u) of object node %u (%s) to %s\n",
+           method.getName().c_str(),
+           method.getID(),
+	   method.getGroup().getName().c_str(),
+	   method.getGroup().getID(),
+	   method.getGroup().getNode().getID(),
+	   method.getGroup().getNode().getName().c_str(),
+	   name.c_str());
   }
 
   void onDestroy(Method& method)
   {
-    printf("Destroyed method %s(%u) of method group %s(%u) of object node %u (%s) (duplicate)\n",
+    printf("Destroyed method %s(%u) of method group %s(%u) of object node %u (%s) (duplicate message)\n",
            method.getName().c_str(),
            method.getID(),
 	   method.getGroup().getName().c_str(),

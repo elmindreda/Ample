@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <new>
 
@@ -272,7 +277,7 @@ void Session::receiveAccept(void* user, VNodeID avatarID, const char* address, u
 
   session->mAvatarID = avatarID;
   session->mState = CONNECTED;
-  session->updateData();
+  session->updateDataVersion();
 
   const ObserverList& observers = session->getObservers();
   for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -291,7 +296,7 @@ void Session::receiveTerminate(void* user, const char* address, const char* byeb
     (*i)->onTerminate(*session, byebye);
 
   session->mState = TERMINATED;
-  session->updateData();
+  session->updateDataVersion();
 }
 
 void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwner owner)
@@ -307,6 +312,7 @@ void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwn
   {
     case V_NT_OBJECT:
       node = new ObjectNode(ID, owner, *session); 
+      verse_send_o_transform_subscribe(node->getID(), VN_FORMAT_REAL64);
       break;
     case V_NT_GEOMETRY:
       node = new GeometryNode(ID, owner, *session); 
@@ -332,7 +338,7 @@ void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwn
     return;
   
   session->mNodes.push_back(node);
-  session->updateStructure();
+  session->updateStructureVersion();
 
   if (owner == VN_OWNER_MINE)
   {
@@ -380,7 +386,7 @@ void Session::receiveNodeDestroy(void* user, VNodeID ID)
       delete *node;
       nodes.erase(node);
 
-      session->updateStructure();
+      session->updateStructureVersion();
       break;
     }
   }

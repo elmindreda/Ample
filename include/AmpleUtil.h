@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////
 // (Modified from the) Wendy core library
-// Copyright (C) 2004 Camilla Berglund <elmindreda@users.sourceforge.net>
+// Copyright (C) 2004 Camilla Berglund <camilla.berglund@gmail.com>
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any
@@ -24,6 +24,10 @@
 ///////////////////////////////////////////////////////////////////////
 #ifndef AMPLEUTIL_H
 #define AMPLEUTIL_H
+///////////////////////////////////////////////////////////////////////
+
+#include <math.h>
+
 ///////////////////////////////////////////////////////////////////////
 
 namespace verse
@@ -77,8 +81,50 @@ public:
 
 //---------------------------------------------------------------------
 
-typedef Vector3<float> Vector3f;
-typedef Vector3<double> Vector3d;
+typedef Vector3<real32> Vector3f;
+typedef Vector3<real64> Vector3d;
+
+//---------------------------------------------------------------------
+
+class ColorRGB
+{
+public:
+  inline ColorRGB(void);
+  inline ColorRGB(real64 sr, real64 sg, real64 sb);
+  inline void clamp(void);
+  inline ColorRGB min(const ColorRGB& color) const;
+  inline ColorRGB max(const ColorRGB& color) const;
+  inline operator real64* (void);
+  inline operator const real64* (void) const;
+  inline ColorRGB operator - (void) const;
+  inline ColorRGB operator + (real64 value) const;
+  inline ColorRGB operator - (real64 value) const;
+  inline ColorRGB operator * (real64 value) const;
+  inline ColorRGB operator / (real64 value) const;
+  inline ColorRGB operator += (real64 value);
+  inline ColorRGB& operator -= (real64 value);
+  inline ColorRGB& operator *= (real64 value);
+  inline ColorRGB& operator /= (real64 value);
+  inline ColorRGB operator + (const ColorRGB& color) const;
+  inline ColorRGB operator - (const ColorRGB& color) const;
+  inline ColorRGB operator * (const ColorRGB& color) const;
+  inline ColorRGB operator / (const ColorRGB& color) const;
+  inline ColorRGB operator += (const ColorRGB& color);
+  inline ColorRGB& operator -= (const ColorRGB& color);
+  inline ColorRGB& operator *= (const ColorRGB& color);
+  inline ColorRGB& operator /= (const ColorRGB& color);
+  inline bool operator == (const ColorRGB& color) const;
+  inline bool operator != (const ColorRGB& color) const;
+  inline real64 getLength(void) const;
+  inline real64 getSquaredLength(void) const;
+  inline void setDefaults(void);
+  inline void set(real64 sr, real64 sg, real64 sb);
+  real64 r;
+  real64 g;
+  real64 b;
+  static const ColorRGB WHITE;
+  static const ColorRGB BLACK;
+};
 
 //---------------------------------------------------------------------
 
@@ -322,6 +368,200 @@ inline void Vector3<T>::set(T sx, T sy, T sz)
   y = sy;
   z = sz;
 }	
+
+//---------------------------------------------------------------------
+
+inline ColorRGB::ColorRGB(void)
+{
+}
+
+inline ColorRGB::ColorRGB(real64 sr, real64 sg, real64 sb):
+  r(sr),
+  g(sg),
+  b(sb)
+{
+}
+
+inline void ColorRGB::clamp(void)
+{
+  if (r > 1.f)
+    r = 1.f;
+  else if (r < 0.f)
+    r = 0.f;
+  
+  if (g > 1.f)
+    g = 1.f;
+  else if (g < 0.f)
+    g = 0.f;
+  
+  if (b > 1.f)
+    b = 1.f;
+  else if (b < 0.f)
+    b = 0.f;
+}
+
+inline ColorRGB ColorRGB::min(const ColorRGB& color) const
+{
+  return ColorRGB(fminf(r, color.r), fminf(g, color.g), fminf(b, color.b));
+}
+
+inline ColorRGB ColorRGB::max(const ColorRGB& color) const
+{
+  return ColorRGB(fmaxf(r, color.r), fmaxf(g, color.g), fmaxf(b, color.b));
+}
+
+inline ColorRGB::operator real64* (void)
+{
+  return &(r);
+}
+
+inline ColorRGB::operator const real64* (void) const
+{
+  return &(r);
+}
+
+inline ColorRGB ColorRGB::operator - (void) const
+{
+  return ColorRGB(-r, -g, -b);
+}
+
+inline ColorRGB ColorRGB::operator + (real64 value) const
+{
+  return ColorRGB(r + value, g + value, b + value);
+}
+
+inline ColorRGB ColorRGB::operator - (real64 value) const
+{
+  return ColorRGB(r - value, g - value, b - value);
+}
+
+inline ColorRGB ColorRGB::operator * (real64 value) const
+{
+  return ColorRGB(r * value, g * value, b * value);
+}
+
+inline ColorRGB ColorRGB::operator / (real64 value) const
+{
+  return ColorRGB(r / value, g / value, b / value);
+}
+
+inline ColorRGB ColorRGB::operator += (real64 value)
+{
+  r += value;
+  g += value;
+  b += value;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator -= (real64 value)
+{
+  r -= value;
+  g -= value;
+  b -= value;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator *= (real64 value)
+{
+  r *= value;
+  g *= value;
+  b *= value;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator /= (real64 value)
+{
+  r /= value;
+  g /= value;
+  b /= value;
+  return *this;
+}
+
+inline ColorRGB ColorRGB::operator + (const ColorRGB& color) const
+{
+  return ColorRGB(r + color.r, g + color.g, b + color.b);
+}
+
+inline ColorRGB ColorRGB::operator - (const ColorRGB& color) const
+{
+  return ColorRGB(r - color.r, g - color.g, b - color.b);
+}
+
+inline ColorRGB ColorRGB::operator * (const ColorRGB& color) const
+{
+  return ColorRGB(r * color.r, g * color.g, b * color.b);
+}
+
+inline ColorRGB ColorRGB::operator / (const ColorRGB& color) const
+{
+  return ColorRGB(r / color.r, g / color.g, b / color.b);
+}
+
+inline ColorRGB ColorRGB::operator += (const ColorRGB& color)
+{
+  r += color.r;
+  g += color.g;
+  b += color.b;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator -= (const ColorRGB& color)
+{
+  r -= color.r;
+  g -= color.g;
+  b -= color.b;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator *= (const ColorRGB& color)
+{
+  r *= color.r;
+  g *= color.g;
+  b *= color.b;
+  return *this;
+}
+
+inline ColorRGB& ColorRGB::operator /= (const ColorRGB& color)
+{
+  r /= color.r;
+  g /= color.g;
+  b /= color.b;
+  return *this;
+}
+
+inline bool ColorRGB::operator == (const ColorRGB& color) const
+{
+  return r == color.r && g == color.g && b == color.b;
+}
+
+inline bool ColorRGB::operator != (const ColorRGB& color) const
+{
+  return r != color.r || g != color.g || b != color.b;
+}
+
+inline real64 ColorRGB::getLength(void) const
+{
+  return r * r + g * g + b * b;
+}
+
+inline real64 ColorRGB::getSquaredLength(void) const
+{
+  return sqrtf(r * r + g * g + b * b);
+}
+
+inline void ColorRGB::setDefaults(void)
+{
+  r = 0.f;
+  g = 0.f;
+  b = 0.f;
+}
+
+inline void ColorRGB::set(real64 sr, real64 sg, real64 sb)
+{
+  r = sr;
+  g = sg;
+  b = sb;
+}
 
 //---------------------------------------------------------------------
 

@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -73,6 +78,24 @@ const TagGroup* Node::getTagGroupByName(const std::string& name) const
 unsigned int Node::getTagGroupCount(void) const
 {
   return mGroups.size();
+}
+
+Tag* Node::getTagByNames(const std::string& groupName, const std::string& tagName)
+{
+  TagGroup* group = getTagGroupByName(groupName);
+  if (!group)
+    return NULL;
+
+  return group->getTagByName(tagName);
+}
+
+const Tag* Node::getTagByNames(const std::string& groupName, const std::string& tagName) const
+{
+  const TagGroup* group = getTagGroupByName(groupName);
+  if (!group)
+    return NULL;
+
+  return group->getTagByName(tagName);
 }
 
 bool Node::isMine(void) const
@@ -152,7 +175,7 @@ void Node::receiveNodeNameSet(void* user, VNodeID ID, const char* name)
     (*i)->onSetName(*node, name);
   
   node->mName = name;
-  node->updateData();
+  node->updateDataVersion();
 }
 
 void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const char* name)
@@ -171,13 +194,13 @@ void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const c
       (*i)->onSetName(*group, name);
       
     group->mName = name;
-    group->updateData();
+    group->updateDataVersion();
   }
   else
   {
     group = new TagGroup(groupID, name, *node);
     node->mGroups.push_back(group);
-    node->updateStructure();
+    node->updateStructureVersion();
     
     const Node::ObserverList& observers = node->getObservers();
     for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -217,7 +240,7 @@ void Node::receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID)
       delete *group;
       groups.erase(group);
 
-      node->updateStructure();
+      node->updateStructureVersion();
       break;
     }
   }

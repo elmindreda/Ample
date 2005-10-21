@@ -1,3 +1,8 @@
+//---------------------------------------------------------------------
+// Simple C++ retained mode library for Verse
+// Copyright (c) PDC, KTH
+// Written by Camilla Berglund <clb@kth.se>
+//---------------------------------------------------------------------
 
 #include <verse.h>
 
@@ -97,7 +102,7 @@ void TextBuffer::receiveTextBufferSet(void* user, VNodeID ID, VBufferID bufferID
     (*i)->onReplaceRange(*buffer, position, length, text);
 
   buffer->mText.replace(position, length, text);
-  buffer->updateData();
+  buffer->updateDataVersion();
 }
 
 //---------------------------------------------------------------------
@@ -228,7 +233,7 @@ void TextNode::receiveNodeLanguageSet(void* user, VNodeID ID, const char* langua
   }
   
   node->mLanguage = language;
-  node->updateData();
+  node->updateDataVersion();
 }
 
 void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferID, const char* name)
@@ -247,13 +252,13 @@ void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferI
       (*i)->onSetName(*buffer, name);
     
     buffer->mName = name;
-    buffer->updateData();
+    buffer->updateDataVersion();
   }
   else
   {
     buffer = new TextBuffer(bufferID, name, *node);
     node->mBuffers.push_back(buffer);
-    node->updateStructure();
+    node->updateStructureVersion();
 
     const Node::ObserverList& observers = node->getObservers();
     for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -297,7 +302,7 @@ void TextNode::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID buffer
       delete *buffer;
       buffers.erase(buffer);
       
-      node->updateStructure();
+      node->updateStructureVersion();
       break;
     }
   }
