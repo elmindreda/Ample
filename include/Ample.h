@@ -4,6 +4,9 @@
 // Written by Camilla Berglund <clb@kth.se>
 //---------------------------------------------------------------------
 
+#ifndef __AMPLE_H__
+#define __AMPLE_H__
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -2103,4 +2106,6 @@ public:
 
   } /*namespace ample*/
 } /*namespace verse*/
+
+#endif /* __AMPLE_H__ */
 
