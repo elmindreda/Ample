@@ -24,7 +24,7 @@ const uint32 INVALID_VERTEX_ID = ((uint32) ~0);
 const uint32 INVALID_POLYGON_ID = ((uint32) ~0);
 
 const VLayerID BASE_VERTEX_LAYER_ID = 0;
-const VLayerID BASE_POLYGON_LAYER_ID = 0;
+const VLayerID BASE_POLYGON_LAYER_ID = 1;
 
 //---------------------------------------------------------------------
 
