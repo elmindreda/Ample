@@ -17,7 +17,9 @@ namespace verse
 
 void BitmapLayer::destroy(void)
 {
-  // TODO: The code.
+  getNode().getSession().push();
+  verse_send_b_layer_destroy(getNode().getID(), mID);
+  getNode().getSession().pop();
 }
 
 VLayerID BitmapLayer::getID(void) const
@@ -40,6 +42,34 @@ BitmapLayer::BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node)
   mName(name),
   mNode(node)
 {
+  // TODO: The code.
+}
+
+void BitmapLayer::initialize(void)
+{
+  verse_callback_set((void*) verse_send_b_tile_set,
+                     (void*) receiveTileSet,
+		     NULL);
+}
+
+void BitmapLayer::receiveTileSet(VNodeID nodeID,
+                                 VLayerID layerID,
+				 uint16 tileX,
+				 uint16 tileY,
+				 uint16 z,
+				 VNBLayerType type,
+				 const VNBTile* data)
+{
+  Session* session = Session::getCurrent();
+
+  BitmapNode* node = dynamic_cast<BitmapNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  BitmapLayer* layer = node->getLayerByID(layerID);
+  if (!layer)
+    return;
+
   // TODO: The code.
 }
 
@@ -103,7 +133,9 @@ const BitmapLayer* BitmapNode::getLayerByName(const std::string& name) const
 
 void BitmapNode::setDimensions(uint16 width, uint16 height, uint16 depth)
 {
-  // TODO: The code.
+  getSession().push();
+  verse_send_b_dimensions_set(getID(), width, height, depth);
+  getSession().pop();
 }
 
 uint16 BitmapNode::getWidth(void) const
@@ -121,8 +153,20 @@ uint16 BitmapNode::getDepth(void) const
   return mDepth;
 }
 
+unsigned int BitmapNode::getDimensionCount(void) const
+{
+  if (mDepth > 1)
+    return 3;
+  if (mHeight > 1)
+    return 2;
+  return 1;
+}
+
 BitmapNode::BitmapNode(VNodeID ID, VNodeOwner owner, Session& session):
-  Node(ID, V_NT_BITMAP, owner, session)
+  Node(ID, V_NT_BITMAP, owner, session),
+  mWidth(0),
+  mHeight(0),
+  mDepth(0)
 {
 }
 
@@ -132,6 +176,100 @@ BitmapNode::~BitmapNode(void)
   {
     delete mLayers.back();
     mLayers.pop_back();
+  }
+}
+
+void BitmapNode::initialize(void)
+{
+  BitmapLayer::initialize();
+
+  verse_callback_set((void*) verse_send_b_dimensions_set,
+                     (void*) receiveDimensionsSet,
+		     NULL);
+  verse_callback_set((void*) verse_send_b_layer_create,
+                     (void*) receiveLayerCreate,
+		     NULL);
+  verse_callback_set((void*) verse_send_b_layer_destroy,
+                     (void*) receiveLayerDestroy,
+		     NULL);
+}
+
+void BitmapNode::receiveDimensionsSet(void* user,
+                                      VNodeID nodeID,
+				      uint16 width,
+				      uint16 height,
+				      uint16 depth)
+{
+  Session* session = Session::getCurrent();
+
+  BitmapNode* node = dynamic_cast<BitmapNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  // TODO: The code.
+}
+
+void BitmapNode::receiveLayerCreate(void* user,
+                                    VNodeID nodeID,
+				    VLayerID layerID,
+				    const char* name,
+				    VNBLayerType type)
+{
+  Session* session = Session::getCurrent();
+
+  BitmapNode* node = dynamic_cast<BitmapNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  BitmapLayer* layer = node->getLayerByID(layerID);
+  if (layer)
+  {
+    // TODO: Update layer object.
+  }
+  else
+  {
+    layer = new BitmapLayer(layerID, name, *node);
+    node->mLayers.push_back(layer);
+    node->updateStructureVersion();
+
+    verse_send_b_layer_subscribe(nodeID, layerID, 0);
+  }
+}
+
+void BitmapNode::receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerID)
+{
+  Session* session = Session::getCurrent();
+
+  BitmapNode* node = dynamic_cast<BitmapNode*>(session->getNodeByID(nodeID));
+  if (!node)
+    return;
+
+  BitmapNode::LayerList& layers = node->mLayers;
+  for (BitmapNode::LayerList::iterator layer = layers.begin();  layer != layers.end();  layer++)
+  {
+    if ((*layer)->getID() == layerID)
+    {
+      // Notify tag group observers.
+      {
+        const BitmapLayer::ObserverList& observers = (*layer)->getObservers();
+        for (BitmapLayer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
+          (*observer)->onDestroy(*(*layer));
+      }
+      
+      // Notify node observers.
+      const BitmapNode::ObserverList& observers = node->getObservers();
+      for (BitmapNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      {
+	if (BitmapNodeObserver* observer = dynamic_cast<BitmapNodeObserver*>(*i))
+	  observer->onDestroyLayer(*node, *(*layer));
+      }
+      
+      delete *layer;
+      layers.erase(layer);
+
+      node->updateStructureVersion();
+      break;
+    }
   }
 }
 

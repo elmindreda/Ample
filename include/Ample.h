@@ -350,6 +350,7 @@ class Versioned
   friend class MethodGroup;
   friend class Link;
   friend class ObjectNode;
+  friend class BitmapNode;
   friend class Session;
 public:
   /*! Constructor.
@@ -1745,6 +1746,8 @@ public:
   BitmapNode& getNode(void) const;
 private:
   BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node);
+  static void initialize(void);
+  static void receiveTileSet(VNodeID nodeID, VLayerID layerID, uint16 tileX, uint16 tileY, uint16 z, VNBLayerType type, const VNBTile* data);
   VLayerID mID;
   std::string mName;
   BitmapNode& mNode;
@@ -1798,6 +1801,7 @@ public:
   uint16 getWidth(void) const;
   uint16 getHeight(void) const;
   uint16 getDepth(void) const;
+  unsigned int getDimensionCount(void) const;
 private:
   BitmapNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~BitmapNode(void);

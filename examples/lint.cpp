@@ -126,14 +126,13 @@ class TextListener : public TextBufferObserver, public TextNodeObserver
 {
   void onReplaceRange(TextBuffer& buffer, uint32 position, uint32 length, const std::string& text)
   {
-    printf("Replaced range [%u, %u) in text buffer %s(%u) in text node %u (%s) with %s\n",
+    printf("Replaced range [%u, %u) in text buffer %s(%u) in text node %u (%s)\n",
            position,
            position + length,
            buffer.getName().c_str(),
            buffer.getID(),
            buffer.getNode().getID(),
-           buffer.getNode().getName().c_str(),
-           text.c_str());
+           buffer.getNode().getName().c_str());
   }
 
   void onSetName(TextBuffer& buffer, const std::string& name)
@@ -296,7 +295,7 @@ class ObjectListener : public ObjectNodeObserver,
 {
   void onCreateMethodGroup(ObjectNode& node, MethodGroup& group)
   {
-    printf("Created method group %s(%u) of in object node %u (%s)\n",
+    printf("Created method group %s(%u) in object node %u (%s)\n",
            group.getName().c_str(),
 	   group.getID(),
 	   node.getID(),

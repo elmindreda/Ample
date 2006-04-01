@@ -4,7 +4,7 @@
 AC_PREREQ(2.57)
 AC_INIT(ample, 0.3, clb@kth.se)
 AC_CONFIG_SRCDIR([src/AmpleNode.cpp])
-AM_INIT_AUTOMAKE([check-news])
+AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([include/config.h])
 AC_CANONICAL_HOST
 

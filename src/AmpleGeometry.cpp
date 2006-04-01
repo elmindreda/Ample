@@ -15,6 +15,10 @@ namespace verse
 
 //---------------------------------------------------------------------
 
+// BIG FAT TODO: Add polygon validity bitmap to node.
+
+//---------------------------------------------------------------------
+
 namespace
 {
 
@@ -1114,7 +1118,7 @@ void GeometryNode::deletePolygon(uint32 polygonID)
 
 size_t GeometryNode::getVertexSize(void) const
 {
-  unsigned int size = 0;
+  size_t size = 0;
 
   for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
   {
@@ -1127,7 +1131,7 @@ size_t GeometryNode::getVertexSize(void) const
 
 size_t GeometryNode::getPolygonSize(void) const
 {
-  unsigned int size = 0;
+  size_t size = 0;
 
   for (LayerList::const_iterator i = mLayers.begin();  i != mLayers.end();  i++)
   {
