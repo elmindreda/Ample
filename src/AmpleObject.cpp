@@ -555,7 +555,7 @@ void ObjectNode::createMethodGroup(const std::string& name)
 void ObjectNode::createLink(const std::string& name, VNodeID nodeID, VNodeID targetID)
 {
   getSession().push();
-  verse_send_o_link_set(getID(), 0, nodeID, name.c_str(), targetID);
+  verse_send_o_link_set(getID(), (uint16) ~0, nodeID, name.c_str(), targetID);
   getSession().pop();
 }
 
