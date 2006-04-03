@@ -170,12 +170,15 @@ void Node::receiveNodeNameSet(void* user, VNodeID ID, const char* name)
   if (!node)
     return;
   
-  const Node::ObserverList& observers = node->getObservers();
-  for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-    (*i)->onSetName(*node, name);
-  
-  node->mName = name;
-  node->updateDataVersion();
+  if (node->mName != name)
+  {
+    const Node::ObserverList& observers = node->getObservers();
+    for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+      (*i)->onSetName(*node, name);
+    
+    node->mName = name;
+    node->updateDataVersion();
+  }
 }
 
 void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const char* name)
@@ -189,12 +192,15 @@ void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const c
   TagGroup* group = node->getTagGroupByID(groupID);
   if (group)
   {
-    const TagGroup::ObserverList& observers = group->getObservers();
-    for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      (*i)->onSetName(*group, name);
-      
-    group->mName = name;
-    group->updateDataVersion();
+    if (group->mName != name)
+    {
+      const TagGroup::ObserverList& observers = group->getObservers();
+      for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*group, name);
+	
+      group->mName = name;
+      group->updateDataVersion();
+    }
   }
   else
   {

@@ -7,9 +7,20 @@ using namespace verse::ample;
 
 class NodeListener : public TagObserver, public TagGroupObserver, public NodeObserver
 {
-  void onChange(Tag& tag)
+  void onSetType(Tag& tag, VNTagType type, const VNTag& value)
   {
-    printf("Changed something in tag %s(%u) in group %s(%u) of node %u (%s)\n",
+    printf("Changed type of tag %s(%u) in group %s(%u) of node %u (%s)\n",
+           tag.getName().c_str(),
+           tag.getID(),
+	   tag.getGroup().getName().c_str(),
+           tag.getGroup().getID(),
+	   tag.getGroup().getNode().getID(),
+	   tag.getGroup().getNode().getName().c_str());
+  }
+
+  void onSetValue(Tag& tag, const VNTag& value)
+  {
+    printf("Changed value of tag %s(%u) in group %s(%u) of node %u (%s)\n",
            tag.getName().c_str(),
            tag.getID(),
 	   tag.getGroup().getName().c_str(),

@@ -32,17 +32,22 @@ const std::string& BitmapLayer::getName(void) const
   return mName;
 }
 
+VNBLayerType BitmapLayer::getType(void) const
+{
+  return mType;
+}
+
 BitmapNode& BitmapLayer::getNode(void) const
 {
   return mNode;
 }
 
-BitmapLayer::BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node):
+BitmapLayer::BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node, VNBLayerType type):
   mID(ID),
   mName(name),
-  mNode(node)
+  mNode(node),
+  mType(type)
 {
-  // TODO: The code.
 }
 
 void BitmapLayer::initialize(void)
@@ -70,10 +75,23 @@ void BitmapLayer::receiveTileSet(VNodeID nodeID,
   if (!layer)
     return;
 
-  // TODO: The code.
+  if (layer->mType != type)
+    return;
+
+  // TODO: Check bounds.
+  // TODO: Notify observers.
+  // TODO: Blit tile.
 }
 
 //---------------------------------------------------------------------
+
+void BitmapLayerObserver::setTile(BitmapLayer& layer, uint16 tileX, uint16 tileY, uint16 z, const VNBTile& tile)
+{
+}
+
+void BitmapLayerObserver::onSetType(BitmapLayer& layer, VNBLayerType type)
+{
+}
 
 void BitmapLayerObserver::onSetName(BitmapLayer& layer, const std::string name)
 {
@@ -84,6 +102,13 @@ void BitmapLayerObserver::onDestroy(BitmapLayer& layer)
 }
 
 //---------------------------------------------------------------------
+
+void BitmapNode::createLayer(const std::string& name, VNBLayerType type)
+{
+  getSession().push();
+  verse_send_b_layer_create(getID(), (VLayerID) ~0, name.c_str(), type);
+  getSession().pop();
+}
 
 BitmapLayer* BitmapNode::getLayerByID(VLayerID ID)
 {
@@ -207,6 +232,11 @@ void BitmapNode::receiveDimensionsSet(void* user,
     return;
 
   // TODO: The code.
+
+  node->mWidth = width;
+  node->mHeight = height;
+  node->mDepth = depth;
+  node->updateDataVersion();
 }
 
 void BitmapNode::receiveLayerCreate(void* user,
@@ -224,11 +254,31 @@ void BitmapNode::receiveLayerCreate(void* user,
   BitmapLayer* layer = node->getLayerByID(layerID);
   if (layer)
   {
-    // TODO: Update layer object.
+    if (layer->mName != name)
+    {
+      const BitmapLayer::ObserverList& observers = layer->getObservers();
+      for (BitmapLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*layer, name);
+	
+      layer->mName = name;
+      layer->updateDataVersion();
+    }
+
+    if (type != layer->mType)
+    {
+      const BitmapLayer::ObserverList& observers = layer->getObservers();
+      for (BitmapLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetType(*layer, type);
+	
+      // TODO: Convert layer data.
+
+      layer->mType = type;
+      layer->updateDataVersion();
+    }
   }
   else
   {
-    layer = new BitmapLayer(layerID, name, *node);
+    layer = new BitmapLayer(layerID, name, *node, type);
     node->mLayers.push_back(layer);
     node->updateStructureVersion();
 

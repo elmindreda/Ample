@@ -90,7 +90,11 @@ Tag::Tag(uint16 ID, const std::string& name, VNTagType type, const VNTag& value,
 
 //---------------------------------------------------------------------
 
-void TagObserver::onChange(Tag& tag)
+void TagObserver::onSetType(Tag& tag, VNTagType type, const VNTag& value)
+{
+}
+
+void TagObserver::onSetValue(Tag& tag, const VNTag& value)
 {
 }
 
@@ -241,24 +245,35 @@ void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 t
   {
     if (tag->mName != name)
     {
-      // TODO: Notify name change.
+      const Tag::ObserverList& observers = tag->getObservers();
+      for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*tag, name);
+      
+      tag->mName = name;
+      tag->updateDataVersion();
     }
 
-    if (tag->mType != type)
+    if (tag->mType == type)
     {
-      // TODO: Notify type change.
+      // TODO: Compare values.
+
+      const Tag::ObserverList& observers = tag->getObservers();
+      for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetValue(*tag, *value);
+      
+      tag->mValue = *value;
+      tag->updateDataVersion();
     }
-
-    // TODO: Compare values.
-
-    const Tag::ObserverList& observers = tag->getObservers();
-    for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      (*i)->onChange(*tag);
-    
-    tag->mName = name;
-    tag->mType = type;
-    tag->mValue = *value;
-    tag->updateDataVersion();
+    else
+    {
+      const Tag::ObserverList& observers = tag->getObservers();
+      for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetType(*tag, type, *value);
+      
+      tag->mType = type;
+      tag->mValue = *value;
+      tag->updateDataVersion();
+    }
   }
   else
   {

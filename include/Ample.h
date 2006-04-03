@@ -439,11 +439,8 @@ private:
 class TagObserver : public Observer<TagObserver>
 {
 public:
-  //! @todo Change.
-  /*! Called when the observed tag changes.
-   *  @param tag The tag that changed.
-   */
-  virtual void onChange(Tag& tag);
+  virtual void onSetType(Tag& tag, VNTagType type, const VNTag& value);
+  virtual void onSetValue(Tag& tag, const VNTag& value);
   /*! Called before an observed tag has its name changed.
    *  @param tag The observed tag.
    *  @param name The new name of the tag.
@@ -1736,21 +1733,25 @@ public:
 
 /*! @remarks Not finished.
  */
-class BitmapLayer : public Observable<BitmapLayerObserver>
+class BitmapLayer : public Versioned, public Observable<BitmapLayerObserver>
 {
   friend class BitmapNode;
 public:
   void destroy(void);
+  void getTile(uint16 tileX, uint16 tileY, uint16 z, VNBTile& tile);
+  void setTile(uint16 tileX, uint16 tileY, uint16 z, const VNBTile& tile);
   VLayerID getID(void) const;
   const std::string& getName(void) const;
+  VNBLayerType getType(void) const;
   BitmapNode& getNode(void) const;
 private:
-  BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node);
+  BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node, VNBLayerType type);
   static void initialize(void);
   static void receiveTileSet(VNodeID nodeID, VLayerID layerID, uint16 tileX, uint16 tileY, uint16 z, VNBLayerType type, const VNBTile* data);
   VLayerID mID;
   std::string mName;
   BitmapNode& mNode;
+  VNBLayerType mType;
 };
 
 //---------------------------------------------------------------------
@@ -1760,6 +1761,8 @@ private:
 class BitmapLayerObserver : public Observer<BitmapLayerObserver>
 {
 public:
+  virtual void setTile(BitmapLayer& layer, uint16 tileX, uint16 tileY, uint16 z, const VNBTile& tile);
+  virtual void onSetType(BitmapLayer& layer, VNBLayerType type);
   virtual void onSetName(BitmapLayer& layer, const std::string name);
   virtual void onDestroy(BitmapLayer& layer);
 };
@@ -1772,6 +1775,7 @@ class BitmapNode : public Node
 {
   friend class Session;
 public:
+  void createLayer(const std::string& name, VNBLayerType type);
   /*! @param ID The ID of the desired bitmap layer.
    *  @return The bitmap layer with the specified ID, or @c NULL if no such bitmap layer exists.
    */

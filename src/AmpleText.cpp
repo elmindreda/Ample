@@ -247,12 +247,15 @@ void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferI
   TextBuffer* buffer = node->getBufferByID(bufferID);
   if (buffer)
   {
-    const TextBuffer::ObserverList& observers = buffer->getObservers();
-    for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
-      (*i)->onSetName(*buffer, name);
-    
-    buffer->mName = name;
-    buffer->updateDataVersion();
+    if (buffer->mName != name)
+    {
+      const TextBuffer::ObserverList& observers = buffer->getObservers();
+      for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+	(*i)->onSetName(*buffer, name);
+      
+      buffer->mName = name;
+      buffer->updateDataVersion();
+    }
   }
   else
   {
