@@ -199,8 +199,8 @@ void Session::update(uint32 microseconds)
     if ((*session)->mState == RELEASED)
     {
       const ObserverList& observers = (*session)->getObservers();
-      for (ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
-        (*observer)->onDestroy(*(*session));
+      for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+        (*i)->onDestroy(*(*session));
 
       SessionList::iterator released = session++;
       msSessions.erase(released);

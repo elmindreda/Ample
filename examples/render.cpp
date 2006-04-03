@@ -76,14 +76,14 @@ void Renderer::onDestroyNode(Session& session, Node& node)
 
 Renderer renderer;
 
-static void update(int value)
+static void updateCallback(int value)
 {
   Session::update(1000);
   glutPostRedisplay();
-  glutTimerFunc(35, update, 0);
+  glutTimerFunc(35, updateCallback, 0);
 }
 
-static void display(void)
+static void displayCallback(void)
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   renderer.render();
@@ -106,8 +106,11 @@ int main(int argc, char** argv)
   glutInitWindowSize(640, 480);
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
   glutCreateWindow("Ample renderer");
-  glutDisplayFunc(display);
-  glutTimerFunc(35, update, 0);
+  glutDisplayFunc(displayCallback);
+  glutTimerFunc(35, updateCallback, 0);
+  glutKeyboardFunc(keyboardCallback);
+  glutSpecialFunc(specialCallback);
+  glutMouseFunc(mouseCallback);
 
   glClearColor(0.f, 0.f, 0.f, 1.f);
   glFrontFace(GL_CW);
