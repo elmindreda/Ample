@@ -52,7 +52,7 @@ void Session::release(void)
 void Session::createNode(const std::string& name, VNodeType type)
 {
   push();
-  verse_send_node_create(~1, type, VN_OWNER_MINE);
+  verse_send_node_create((VNodeID) ~0, type, VN_OWNER_MINE);
   pop();
 
   mPending.push_back(PendingNode(name, type));
