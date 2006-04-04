@@ -57,7 +57,8 @@ void BitmapLayer::initialize(void)
 		     NULL);
 }
 
-void BitmapLayer::receiveTileSet(VNodeID nodeID,
+void BitmapLayer::receiveTileSet(void* user,
+                                 VNodeID nodeID,
                                  VLayerID layerID,
 				 uint16 tileX,
 				 uint16 tileY,

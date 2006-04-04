@@ -1747,7 +1747,7 @@ public:
 private:
   BitmapLayer(VLayerID ID, const std::string& name, BitmapNode& node, VNBLayerType type);
   static void initialize(void);
-  static void receiveTileSet(VNodeID nodeID, VLayerID layerID, uint16 tileX, uint16 tileY, uint16 z, VNBLayerType type, const VNBTile* data);
+  static void receiveTileSet(void* user, VNodeID nodeID, VLayerID layerID, uint16 tileX, uint16 tileY, uint16 z, VNBLayerType type, const VNBTile* data);
   VLayerID mID;
   std::string mName;
   BitmapNode& mNode;

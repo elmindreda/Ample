@@ -299,38 +299,37 @@ void Session::receiveTerminate(void* user, const char* address, const char* byeb
   session->updateDataVersion();
 }
 
-void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwner owner)
+void Session::receiveNodeCreate(void* user, VNodeID nodeID, VNodeType type, VNodeOwner owner)
 {
   Session* session = getCurrent();
 
-  // NOTE: This is bad. Don't do this.
-  receiveNodeDestroy(user, ID);
-
-  Node* node;
+  Node* node = getNodeByID(nodeID);
+  if (node)
+    receiveNodeDestroy(user, nodeID);
   
   switch (type)
   {
     case V_NT_OBJECT:
-      node = new ObjectNode(ID, owner, *session); 
+      node = new ObjectNode(nodeID, owner, *session); 
       verse_send_o_transform_subscribe(node->getID(), VN_FORMAT_REAL64);
       break;
     case V_NT_GEOMETRY:
-      node = new GeometryNode(ID, owner, *session); 
+      node = new GeometryNode(nodeID, owner, *session); 
       break;
     case V_NT_MATERIAL:
-      node = new Node(ID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session); 
       break;
     case V_NT_BITMAP:
-      node = new Node(ID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session); 
       break;
     case V_NT_TEXT:
-      node = new TextNode(ID, owner, *session); 
+      node = new TextNode(nodeID, owner, *session); 
       break;
     case V_NT_CURVE:
-      node = new Node(ID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session); 
       break;
     case V_NT_AUDIO:
-      node = new Node(ID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session); 
       break;
   }
 
@@ -346,7 +345,7 @@ void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwn
     {
       if ((*i).mType == type)
       {
-	verse_send_node_name_set(ID, (*i).mName.c_str());
+	verse_send_node_name_set(nodeID, (*i).mName.c_str());
 	session->mPending.erase(i);
 	break;
       }
@@ -357,7 +356,7 @@ void Session::receiveNodeCreate(void* user, VNodeID ID, VNodeType type, VNodeOwn
   for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     (*i)->onCreateNode(*session, *node);
 
-  verse_send_node_subscribe(ID);
+  verse_send_node_subscribe(nodeID);
 }
 
 void Session::receiveNodeDestroy(void* user, VNodeID ID)

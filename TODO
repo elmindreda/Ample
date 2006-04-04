@@ -9,7 +9,6 @@ Basic node
  * Use enum for node type.
 
 Bitmap node
- * Basic implementation.
  * Lots of layer code.
 
 Curve node
@@ -24,8 +23,6 @@ Material node
  * Everything else.
 
 Object node
- * Method argument pack/unpack code.
- * Method observer call notification.
  * Transform change notifications.
 
 Text node
