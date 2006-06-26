@@ -303,7 +303,7 @@ void Session::receiveNodeCreate(void* user, VNodeID nodeID, VNodeType type, VNod
 {
   Session* session = getCurrent();
 
-  Node* node = getNodeByID(nodeID);
+  Node* node = session->getNodeByID(nodeID);
   if (node)
     receiveNodeDestroy(user, nodeID);
   
