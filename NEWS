@@ -1,6 +1,10 @@
 Simple C++ retained mode library for verse
 Copyright (c) PDC, KTH
 
+25 February 2007
+Material and bitmap node work.
+Lots of bugs fixed.
+
 21 March 2005
 Core library works.
 

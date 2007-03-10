@@ -350,6 +350,7 @@ class Versioned
   friend class MethodGroup;
   friend class Link;
   friend class ObjectNode;
+  friend class MaterialNode;
   friend class BitmapNode;
   friend class Session;
 public:
@@ -1156,6 +1157,13 @@ public:
    *  data, or the empty string if no name is set.
    */
   const std::string& getVertexCreaseLayerName(void) const;
+  /*! @return The default vertex crease value.
+   */
+  uint32 getVertexDefaultCrease(void) const;
+  /*! Sets the default vertex crease value.
+   *  @param crease The default vertex crease value.
+   */
+  void setVertexDefaultCrease(uint32 crease);
   /*! @return The geometry layer containing edge crease data, or
    *  @c NULL if no such layer exists.
    */
@@ -1164,6 +1172,13 @@ public:
    *  data, or the empty string if no name is set.
    */
   const std::string& getEdgeCreaseLayerName(void) const;
+  /*! @return The default edge crease value.
+   */
+  uint32 getEdgeDefaultCrease(void) const;
+  /*! Sets the default edge crease value.
+   *  @param crease The default edge crease value.
+   */
+  void setEdgeDefaultCrease(uint32 crease);
   /*! @return The highest currently valid vertex ID.
    */
   uint32 getHighestVertexID(void) const;
@@ -1725,6 +1740,8 @@ public:
    *  @param link The link to be destroyed.
    */
   virtual void onDestroyLink(ObjectNode& node, Link& link);
+  virtual void onSetPosition(ObjectNode& node, Vector3d& position);
+  virtual void onSetRotation(ObjectNode& node, Quaternion64& rotation);
   virtual void onSetScale(ObjectNode& node, Vector3d& scale);
   virtual void onSetLightIntensity(ObjectNode& node, const ColorRGB& color);
 };
@@ -1842,8 +1859,15 @@ class Fragment : public Versioned, public Observable<FragmentObserver>
 public:
   void destroy(void);
   VNMFragmentID getID(void) const;
+  VNMFragmentType getType(void) const;
+  const VMatFrag& getValue(void) const;
+  MaterialNode& getNode(void) const;
 private:
-  Fragment(VNMFragmentID ID);
+  Fragment(VNMFragmentID ID, MaterialNode& node, VNMFragmentType type, const VMatFrag& value);
+  VNMFragmentID mID;
+  VNMFragmentType mType;
+  VMatFrag mValue;
+  MaterialNode& mNode;
 };
 
 //---------------------------------------------------------------------
@@ -1853,6 +1877,8 @@ private:
 class FragmentObserver : public Observer<FragmentObserver>
 {
 public:
+  virtual void onSetType(Fragment& fragment, VNMFragmentType type);
+  virtual void onSetValue(Fragment& fragment, const VMatFrag& value);
   virtual void onDestroy(Fragment& fragment);
 };
 
@@ -1864,6 +1890,7 @@ class MaterialNode : public Node
 {
   friend class Session;
 public:
+  void createFragment(VNMFragmentID ID, VNMFragmentType type, const VMatFrag& value);
   /*! @param ID The ID of the desired material fragment.
    *  @return The material fragment with the specified ID, or @c NULL
    *  if no such material fragment exists.
@@ -1901,6 +1928,8 @@ private:
   MaterialNode(VNodeID ID, VNodeOwner owner, Session& session); 
   ~MaterialNode(void);
   static void initialize(void);
+  static void receiveFragmentCreate(void* user, VNodeID nodeID, VNMFragmentID fragmentID, VNMFragmentType type, const VMatFrag* value);
+  static void receiveFragmentDestroy(void* user, VNodeID nodeID, VNMFragmentID fragmentID);
   typedef std::vector<Fragment*> FragmentList;
   FragmentList mFragments;
 };

@@ -22,6 +22,13 @@ void BitmapLayer::destroy(void)
   getNode().getSession().pop();
 }
 
+void BitmapLayer::setTile(uint16 tileX, uint16 tileY, uint16 z, const VNBTile& tile)
+{
+  getNode().getSession().push();
+  verse_send_b_tile_set(getNode().getID(), mID, tileX, tileY, z, mType, &tile);
+  getNode().getSession().pop();
+}
+
 VLayerID BitmapLayer::getID(void) const
 {
   return mID;
@@ -280,6 +287,14 @@ void BitmapNode::receiveLayerCreate(void* user,
   else
   {
     layer = new BitmapLayer(layerID, name, *node, type);
+
+    const BitmapNode::ObserverList& observers = node->getObservers();
+    for (BitmapNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
+    {
+      if (BitmapNodeObserver* observer = dynamic_cast<BitmapNodeObserver*>(*i))
+        observer->onCreateLayer(*node, *layer);
+    }
+    
     node->mLayers.push_back(layer);
     node->updateStructureVersion();
 

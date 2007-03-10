@@ -108,9 +108,9 @@ int main(int argc, char** argv)
   glutCreateWindow("Ample renderer");
   glutDisplayFunc(displayCallback);
   glutTimerFunc(35, updateCallback, 0);
-  glutKeyboardFunc(keyboardCallback);
-  glutSpecialFunc(specialCallback);
-  glutMouseFunc(mouseCallback);
+  //glutKeyboardFunc(keyboardCallback);
+  //glutSpecialFunc(specialCallback);
+  //glutMouseFunc(mouseCallback);
 
   glClearColor(0.f, 0.f, 0.f, 1.f);
   glFrontFace(GL_CW);

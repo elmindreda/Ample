@@ -909,7 +909,7 @@ void GeometryLayerObserver::onDestroy(GeometryLayer& layer)
 void GeometryNode::createLayer(const std::string& name, VNGLayerType type, uint32 defaultInt, real64 defaultReal)
 {
   getSession().push();
-  verse_send_g_layer_create(getID(), 0xffffffff, name.c_str(), type, defaultInt, defaultReal);
+  verse_send_g_layer_create(getID(), ~0, name.c_str(), type, defaultInt, defaultReal);
   getSession().pop();
 }
 
@@ -1156,6 +1156,18 @@ const std::string& GeometryNode::getVertexCreaseLayerName(void) const
   return mVertexCreases;
 }
 
+uint32 GeometryNode::getVertexDefaultCrease(void) const
+{
+  return mVertexDefaultCrease;
+}
+
+void GeometryNode::setVertexDefaultCrease(uint32 crease)
+{
+  getSession().push();
+  verse_send_g_crease_set_vertex(getID(), mVertexCreases.c_str(), crease);
+  getSession().pop();
+}
+
 GeometryLayer* GeometryNode::getEdgeCreaseLayer(void)
 {
   GeometryLayer* layer = getLayerByName(mEdgeCreases);
@@ -1168,6 +1180,18 @@ GeometryLayer* GeometryNode::getEdgeCreaseLayer(void)
 const std::string& GeometryNode::getEdgeCreaseLayerName(void) const
 {
   return mEdgeCreases;
+}
+
+uint32 GeometryNode::getEdgeDefaultCrease(void) const
+{
+  return mEdgeDefaultCrease;
+}
+
+void GeometryNode::setEdgeDefaultCrease(uint32 crease)
+{
+  getSession().push();
+  verse_send_g_crease_set_edge(getID(), mEdgeCreases.c_str(), crease);
+  getSession().pop();
 }
 
 uint32 GeometryNode::getHighestVertexID(void) const

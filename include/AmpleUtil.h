@@ -28,6 +28,16 @@
 
 #include <math.h>
 
+#ifdef _WIN32
+
+#undef min
+#undef max
+
+float fminf(float x, float y);
+float fmaxf(float x, float y);
+
+#endif /*_WIN32*/
+
 ///////////////////////////////////////////////////////////////////////
 
 namespace verse

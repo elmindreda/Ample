@@ -122,7 +122,7 @@ void TagGroup::createTag(const std::string& name, VNTagType type, const VNTag& v
   Session& session = mNode.getSession();
 
   session.push();
-  verse_send_tag_create(mNode.getID(), mID, 0, name.c_str(), type,
+  verse_send_tag_create(mNode.getID(), mID, ~0, name.c_str(), type,
                         const_cast<VNTag*>(&value));
   session.pop();
 }

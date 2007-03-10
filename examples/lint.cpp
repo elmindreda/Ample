@@ -490,6 +490,55 @@ class ObjectListener : public ObjectNodeObserver,
 
 ObjectListener objectListener;
 
+class MaterialListener : public MaterialNodeObserver, public FragmentObserver
+{  
+public:
+  void onCreateFragment(MaterialNode& node, Fragment& fragment)
+  {
+    printf("Created fragment %u in material node %u (%s)\n",
+           fragment.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+
+    fragment.addObserver(*this);
+  }
+
+  void onDestroyFragment(MaterialNode& node, Fragment& fragment)
+  {
+    printf("Destroyed fragment %u in material node %u (%s)\n",
+           fragment.getID(),
+	   node.getID(),
+	   node.getName().c_str());
+  }
+
+  void onSetType(Fragment& fragment, VNMFragmentType type)
+  {
+    printf("Changed type of fragment %u of material node %u (%s) to %s\n",
+	   fragment.getID(),
+	   fragment.getNode().getID(),
+	   fragment.getNode().getName().c_str(),
+	   fragment.getType());
+  }
+
+  void onSetValue(Fragment& fragment, const VMatFrag& value)
+  {
+    printf("Changed value of fragment %u of material node %u (%s)\n",
+	   fragment.getID(),
+	   fragment.getNode().getID(),
+	   fragment.getNode().getName().c_str());
+  }
+
+  void onDestroy(Fragment& fragment)
+  {
+    printf("Destroyed fragment %u of material node %u (%s) (duplicate message)\n",
+	   fragment.getID(),
+	   fragment.getNode().getID(),
+	   fragment.getNode().getName().c_str());
+  }
+};
+
+MaterialListener materialListener;
+
 class SessionListener : public SessionObserver
 {
 public:
@@ -529,6 +578,12 @@ public:
       {
         node.addObserver(objectListener);
         break;
+      }
+
+      case V_NT_MATERIAL:
+      {
+	node.addObserver(materialListener);
+	break;
       }
     }
   }

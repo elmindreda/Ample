@@ -139,6 +139,8 @@ Session* Session::create(const std::string& address,
     Node::initialize();
     TextNode::initialize();
     GeometryNode::initialize();
+    MaterialNode::initialize();
+    BitmapNode::initialize();
     ObjectNode::initialize();
 
     verse_callback_set((void*) verse_send_connect_accept,
@@ -317,10 +319,10 @@ void Session::receiveNodeCreate(void* user, VNodeID nodeID, VNodeType type, VNod
       node = new GeometryNode(nodeID, owner, *session); 
       break;
     case V_NT_MATERIAL:
-      node = new Node(nodeID, type, owner, *session); 
+      node = new MaterialNode(nodeID, owner, *session); 
       break;
     case V_NT_BITMAP:
-      node = new Node(nodeID, type, owner, *session); 
+      node = new BitmapNode(nodeID, owner, *session); 
       break;
     case V_NT_TEXT:
       node = new TextNode(nodeID, owner, *session); 

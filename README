@@ -1,32 +1,33 @@
 Simple C++ retained mode library for Verse
 Copyright (c) PDC, KTH
 
-Ample is written and maintained by Camilla Berglund <clb@kth.se>.
+Ample is written and maintained by:
+Camilla Berglund <elmindreda@users.sourceforge.net>
 
 Many thanks to brecht and slas for suggestions, bug reports and patches.
 
 The (temporary) website for Ample is:
-http://www.elmindreda.org/ample/
+http://www.elmindreda.org/verse/ample/
 
 To retrieve Ample from anonymous CVS, use:
 
   cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/verse co ample
 
-If you're on a Unix operating system and you just checked this out from
-CVS, you'll want to run bootstrap.sh to get a configure script.
+If you're on a Unix operating system and you just checked this out from CVS,
+you'll want to run bootstrap.sh to get a configure script.
 
-Otherwise, you'll probably want to make a Visual Studio project file.
-I don't provide one just yet.
+Otherwise, you'll probably want to make a Visual Studio project file.  I don't
+provide one just yet.
 
-I know that the internals aren't very OO yet, but I've begun work on
-correcting that.
+I know that the internals aren't very OO yet, but I've begun work on correcting
+that.
 
-Before you complain about implementation details, especially concerning
-performance issues, note that I'm aiming for API completeness first, so
-most lookups are still O(n) or worse.
+Note that I'm aiming for API completeness first, so most lookups are still O(n)
+or worse and thus it should scale very poorly.  The API is designed to allow
+for more efficient algorithms, however.
 
 Please do complain anyway, however.  Feedback is always welcome.
 
-Also note that the geometry node only supports 64-bit real layers for
-now.  This will probably change, one day.
+Also note that the geometry node only supports 64-bit real layers and the
+object node only 64-bit transforms.  This will probably change, one day.
 

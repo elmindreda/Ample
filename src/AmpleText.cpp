@@ -187,7 +187,7 @@ const std::string& TextNode::getLanguage(void) const
 void TextNode::setLanguage(const std::string& language)
 {
   getSession().push();
-  verse_send_t_set_language(getID(), language.c_str());
+  verse_send_t_language_set(getID(), language.c_str());
   getSession().pop();
 }
 
@@ -206,7 +206,7 @@ void TextNode::initialize(void)
 {
   TextBuffer::initialize();
 
-  verse_callback_set((void*) verse_send_t_set_language,
+  verse_callback_set((void*) verse_send_t_language_set,
                      (void*) receiveNodeLanguageSet,
                      NULL);
   verse_callback_set((void*) verse_send_t_buffer_create,

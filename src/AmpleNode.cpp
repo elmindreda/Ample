@@ -25,7 +25,7 @@ void Node::destroy(void)
 void Node::createTagGroup(const std::string& name)
 {
   mSession.push();
-  verse_send_tag_group_create(mID, 0, name.c_str());
+  verse_send_tag_group_create(mID, ~0, name.c_str());
   mSession.pop();
 }
 

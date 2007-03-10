@@ -19,11 +19,11 @@ Geometry node
  * Bone support.
 
 Material node
- * Basic design.
- * Everything else.
+ * Hierarchy tracing.
 
 Object node
- * Transform change notifications.
+ * Better transform change notifications.
+ * Hidden flag.
 
 Text node
  * Nothing right now.
