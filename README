@@ -2,7 +2,7 @@ Simple C++ retained mode library for Verse
 Copyright (c) PDC, KTH
 
 Ample is written and maintained by:
-Camilla Berglund <elmindreda@users.sourceforge.net>
+Camilla Berglund <elmindreda@elmindreda.org>
 
 Many thanks to brecht and slas for suggestions, bug reports and patches.
 
@@ -13,11 +13,11 @@ To retrieve Ample from anonymous CVS, use:
 
   cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/verse co ample
 
-If you're on a Unix operating system and you just checked this out from CVS,
-you'll want to run bootstrap.sh to get a configure script.
+If you are on a Unix operating system and you just checked this out from CVS,
+you will want to run bootstrap.sh to get a configure script.
 
-Otherwise, you'll probably want to make a Visual Studio project file.  I don't
-provide one just yet.
+Otherwise, you will probably want to make a Visual Studio project file.  I
+don't provide one just yet.
 
 I know that the internals aren't very OO yet, but I've begun work on correcting
 that.
