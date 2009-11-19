@@ -8,10 +8,6 @@ if [ ! -f include/Ample.h ]; then
   exit 1
 fi
 
-aclocal && \
-autoheader && \
-automake -a && \
-automake && \
-autoconf && \
-echo "Bootstrap successful, now run configure"
+autoreconf -i && \
+echo "Bootstrap successful, now run ./configure"
 
