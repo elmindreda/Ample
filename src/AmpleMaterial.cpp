@@ -8,6 +8,8 @@
 
 #include <Ample.h>
 
+#include <cstring>
+
 namespace verse
 {
   namespace ample
@@ -159,7 +161,7 @@ bool compareFragments(const VMatFrag& first, const VMatFrag& second, VNMFragment
 
     case VN_M_FT_ANIMATION:
     {
-      return strcmp(first.animation.label, second.animation.label) == 0;
+      return std::strcmp(first.animation.label, second.animation.label) == 0;
     }
 
     case VN_M_FT_ALTERNATIVE:
@@ -172,7 +174,7 @@ bool compareFragments(const VMatFrag& first, const VMatFrag& second, VNMFragment
     {
       return first.output.front == second.output.front &&
              first.output.back == second.output.back &&
-	     strcmp(first.output.label, second.output.label) == 0;
+	     std::strcmp(first.output.label, second.output.label) == 0;
     }
   }
 

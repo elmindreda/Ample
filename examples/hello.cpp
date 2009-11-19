@@ -3,6 +3,8 @@
 
 #include "Ample.h"
 
+#include <iostream>
+
 using namespace verse::ample;
 
 class NodeLister : public SessionObserver, public NodeObserver
@@ -14,7 +16,7 @@ public:
  }
   void onSetName(Node& node, const std::string& name)
   {
-    printf("node: %s\n", name.c_str());
+    std::cout << "node: " << name << std::endl;
   }
 };
 

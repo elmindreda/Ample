@@ -8,6 +8,8 @@
 
 #include <Ample.h>
 
+#include <cstring>
+
 namespace verse
 {
   namespace ample

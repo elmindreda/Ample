@@ -3,6 +3,8 @@
 
 #include <Ample.h>
 
+#include <cstdio>
+
 using namespace verse::ample;
 
 class NodeListener : public TagObserver, public TagGroupObserver, public NodeObserver
@@ -513,7 +515,7 @@ public:
 
   void onSetType(Fragment& fragment, VNMFragmentType type)
   {
-    printf("Changed type of fragment %u of material node %u (%s) to %s\n",
+    printf("Changed type of fragment %u of material node %u (%s) to %u\n",
 	   fragment.getID(),
 	   fragment.getNode().getID(),
 	   fragment.getNode().getName().c_str(),
