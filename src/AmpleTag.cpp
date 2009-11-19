@@ -248,7 +248,7 @@ void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 t
       const Tag::ObserverList& observers = tag->getObservers();
       for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*tag, name);
-      
+
       tag->mName = name;
       tag->updateDataVersion();
     }
@@ -260,7 +260,7 @@ void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 t
       const Tag::ObserverList& observers = tag->getObservers();
       for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetValue(*tag, *value);
-      
+
       tag->mValue = *value;
       tag->updateDataVersion();
     }
@@ -269,7 +269,7 @@ void TagGroup::receiveTagCreate(void* user, VNodeID ID, uint16 groupID, uint16 t
       const Tag::ObserverList& observers = tag->getObservers();
       for (Tag::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetType(*tag, type, *value);
-      
+
       tag->mType = type;
       tag->mValue = *value;
       tag->updateDataVersion();

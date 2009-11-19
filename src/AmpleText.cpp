@@ -231,7 +231,7 @@ void TextNode::receiveNodeLanguageSet(void* user, VNodeID ID, const char* langua
     if (TextNodeObserver* observer = dynamic_cast<TextNodeObserver*>(*i))
       observer->onSetLanguage(*node, language);
   }
-  
+
   node->mLanguage = language;
   node->updateDataVersion();
 }
@@ -252,7 +252,7 @@ void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferI
       const TextBuffer::ObserverList& observers = buffer->getObservers();
       for (TextBuffer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*buffer, name);
-      
+
       buffer->mName = name;
       buffer->updateDataVersion();
     }
@@ -269,7 +269,7 @@ void TextNode::receiveTextBufferCreate(void* user, VNodeID ID, VBufferID bufferI
       if (TextNodeObserver* observer = dynamic_cast<TextNodeObserver*>(*i))
 	observer->onCreateBuffer(*node, *buffer);
     }
-  
+
     verse_send_t_buffer_subscribe(node->getID(), bufferID);
   }
 }
@@ -304,7 +304,7 @@ void TextNode::receiveTextBufferDestroy(void* user, VNodeID ID, VBufferID buffer
 
       delete *buffer;
       buffers.erase(buffer);
-      
+
       node->updateStructureVersion();
       break;
     }

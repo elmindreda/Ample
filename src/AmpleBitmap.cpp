@@ -294,7 +294,7 @@ void BitmapNode::receiveLayerCreate(void* user,
       if (BitmapNodeObserver* observer = dynamic_cast<BitmapNodeObserver*>(*i))
         observer->onCreateLayer(*node, *layer);
     }
-    
+
     node->mLayers.push_back(layer);
     node->updateStructureVersion();
 
@@ -321,7 +321,7 @@ void BitmapNode::receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerI
         for (BitmapLayer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
           (*observer)->onDestroy(*(*layer));
       }
-      
+
       // Notify node observers.
       const BitmapNode::ObserverList& observers = node->getObservers();
       for (BitmapNode::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
@@ -329,7 +329,7 @@ void BitmapNode::receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerI
 	if (BitmapNodeObserver* observer = dynamic_cast<BitmapNodeObserver*>(*i))
 	  observer->onDestroyLayer(*node, *(*layer));
       }
-      
+
       delete *layer;
       layers.erase(layer);
 

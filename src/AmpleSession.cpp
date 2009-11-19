@@ -242,7 +242,7 @@ Session* Session::getCurrent(void)
       }
     }
   }
-  
+
   return msCurrent;
 }
 
@@ -308,36 +308,36 @@ void Session::receiveNodeCreate(void* user, VNodeID nodeID, VNodeType type, VNod
   Node* node = session->getNodeByID(nodeID);
   if (node)
     receiveNodeDestroy(user, nodeID);
-  
+
   switch (type)
   {
     case V_NT_OBJECT:
-      node = new ObjectNode(nodeID, owner, *session); 
+      node = new ObjectNode(nodeID, owner, *session);
       verse_send_o_transform_subscribe(node->getID(), VN_FORMAT_REAL64);
       break;
     case V_NT_GEOMETRY:
-      node = new GeometryNode(nodeID, owner, *session); 
+      node = new GeometryNode(nodeID, owner, *session);
       break;
     case V_NT_MATERIAL:
-      node = new MaterialNode(nodeID, owner, *session); 
+      node = new MaterialNode(nodeID, owner, *session);
       break;
     case V_NT_BITMAP:
-      node = new BitmapNode(nodeID, owner, *session); 
+      node = new BitmapNode(nodeID, owner, *session);
       break;
     case V_NT_TEXT:
-      node = new TextNode(nodeID, owner, *session); 
+      node = new TextNode(nodeID, owner, *session);
       break;
     case V_NT_CURVE:
-      node = new Node(nodeID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session);
       break;
     case V_NT_AUDIO:
-      node = new Node(nodeID, type, owner, *session); 
+      node = new Node(nodeID, type, owner, *session);
       break;
   }
 
   if (!node)
     return;
-  
+
   session->mNodes.push_back(node);
   session->updateStructureVersion();
 
@@ -364,7 +364,7 @@ void Session::receiveNodeCreate(void* user, VNodeID nodeID, VNodeType type, VNod
 void Session::receiveNodeDestroy(void* user, VNodeID ID)
 {
   Session* session = getCurrent();
-  
+
   NodeList& nodes = session->mNodes;
   for (NodeList::iterator node = nodes.begin();  node != nodes.end();  node++)
   {

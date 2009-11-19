@@ -147,7 +147,7 @@ Block::Block(const Block& source):
   mItemCount(0),
   mItemSize(1),
   mGrain(0),
-  mData(NULL)        
+  mData(NULL)
 {
   operator = (source);
 }
@@ -165,7 +165,7 @@ void Block::resize(size_t count)
 
     if (mGrain != 0)
       count = mGrain * ((count + mGrain - 1) / mGrain);
-      
+
     if (mData)
     {
       uint8* data = new uint8 [count * mItemSize];
@@ -183,13 +183,13 @@ void Block::resize(size_t count)
   else
     release();
 }
-  
+
 void Block::reserve(size_t count)
 {
   if (mItemCount < count)
     resize(count);
 }
-  
+
 void Block::release(void)
 {
   delete [] mData;

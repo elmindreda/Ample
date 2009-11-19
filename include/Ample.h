@@ -109,7 +109,7 @@ public:
   BasePolygon(void);
   BasePolygon(uint32 v0, uint32 v1, uint32 v2, uint32 v3);
   bool isValid(void) const;
-  void set(uint32 v0, uint32 v1, uint32 v2, uint32 v3); 
+  void set(uint32 v0, uint32 v1, uint32 v2, uint32 v3);
   void setInvalid(void);
   uint32 mIndices[4];
 };
@@ -169,7 +169,7 @@ public:
   Vector3d mDragNormal;
   uint32 mSeconds;
   uint32 mFraction;
-  real64 mDrag; 
+  real64 mDrag;
 };
 
 //---------------------------------------------------------------------
@@ -274,11 +274,11 @@ public:
   /*! Removes the specified observer from this object.
    *  @param observer The observer to remove.
    */
-  inline void removeObserver(T& observer); 
+  inline void removeObserver(T& observer);
   /*! Removes the specified observer from this object.
    *  @param observer The observer to remove.
    */
-  inline void removeObserver(Observer<T>& observer); 
+  inline void removeObserver(Observer<T>& observer);
   /*! @return The list of observers attached to this object.
    */
   inline const ObserverList& getObservers(void) const;
@@ -531,7 +531,7 @@ private:
   uint16 mID;
   Node& mNode;
 };
-  
+
 //---------------------------------------------------------------------
 
 /*! Observer interface for tag groups.
@@ -1297,7 +1297,7 @@ struct MethodParam
 //---------------------------------------------------------------------
 
 typedef std::vector<MethodParam> MethodParamList;
-                                                         
+
 //---------------------------------------------------------------------
 
 typedef std::vector<VNOParam> MethodArgumentList;
@@ -1362,7 +1362,7 @@ public:
    *  @param method The method which has been called.
    *  @param arguments The arguments passed to the called method.
    */
-  virtual void onCall(Method& method, const MethodArgumentList& arguments);  
+  virtual void onCall(Method& method, const MethodArgumentList& arguments);
   virtual void onSetName(Method& method, const std::string& name);
   /*! Called before an observed method is destroyed.
    *  @param method The method to be destroyed.
@@ -1684,7 +1684,7 @@ public:
    */
   void setScale(const Vector3d& scale);
 private:
-  ObjectNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  ObjectNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~ObjectNode(void);
   void sendTranslation(void);
   void sendRotation(void);
@@ -1824,7 +1824,7 @@ public:
   uint16 getDepth(void) const;
   unsigned int getDimensionCount(void) const;
 private:
-  BitmapNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  BitmapNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~BitmapNode(void);
   static void initialize(void);
   static void receiveDimensionsSet(void* user, VNodeID nodeID, uint16 width, uint16 height, uint16 depth);
@@ -1925,7 +1925,7 @@ public:
    */
   uint16 getFragmentCount(void) const;
 private:
-  MaterialNode(VNodeID ID, VNodeOwner owner, Session& session); 
+  MaterialNode(VNodeID ID, VNodeOwner owner, Session& session);
   ~MaterialNode(void);
   static void initialize(void);
   static void receiveFragmentCreate(void* user, VNodeID nodeID, VNMFragmentID fragmentID, VNMFragmentType type, const VMatFrag* value);

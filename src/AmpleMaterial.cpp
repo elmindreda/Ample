@@ -311,7 +311,7 @@ void MaterialNode::receiveFragmentCreate(void* user,
   MaterialNode* node = dynamic_cast<MaterialNode*>(session->getNodeByID(nodeID));
   if (!node)
     return;
-  
+
   Fragment* fragment = node->getFragmentByID(fragmentID);
   if (fragment)
   {
@@ -320,11 +320,11 @@ void MaterialNode::receiveFragmentCreate(void* user,
       const Fragment::ObserverList& observers = fragment->getObservers();
       for (Fragment::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
         (*i)->onSetType(*fragment, type);
-	
+
       fragment->mType = type;
       fragment->mValue = *value;
       fragment->updateStructureVersion();
-      
+
       //for (Fragment::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       //  (*i)->postSetType(*fragment, type);
     }
@@ -333,10 +333,10 @@ void MaterialNode::receiveFragmentCreate(void* user,
       const Fragment::ObserverList& observers = fragment->getObservers();
       for (Fragment::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
         (*i)->onSetValue(*fragment, *value);
-	  
+
       fragment->mValue = *value;
       fragment->updateDataVersion();
-	  
+
       //for (Fragment::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       //  (*i)->postFragChange(*fragment, frag);
     }
@@ -344,7 +344,7 @@ void MaterialNode::receiveFragmentCreate(void* user,
   else
   {
     fragment = new Fragment(fragmentID, *node, type, *value);
-    
+
 	// Notify node observers.
     const MaterialNode::ObserverList& nObservers = node->getObservers();
     for (MaterialNode::ObserverList::const_iterator i = nObservers.begin();  i != nObservers.end();  i++)
@@ -352,10 +352,10 @@ void MaterialNode::receiveFragmentCreate(void* user,
       if (MaterialNodeObserver* observer = dynamic_cast<MaterialNodeObserver*>(*i))
         observer->onCreateFragment(*node, *fragment);
     }
-	
+
     node->mFragments.push_back(fragment);
     node->updateStructureVersion();
-    
+
     //for (MaterialNode::ObserverList::const_iterator i = nObservers.begin();  i != nObservers.end();  i++)
     //{
     //  if (MaterialNodeObserver* observer = dynamic_cast<MaterialNodeObserver*>(*i))
@@ -384,10 +384,10 @@ void MaterialNode::receiveFragmentDestroy(void* user,
       const Fragment::ObserverList& fObservers = (*f)->getObservers();
       for (Fragment::ObserverList::const_iterator i = fObservers.begin();  i != fObservers.end();  i++)
       {
-      	if (FragmentObserver* observer = dynamic_cast<FragmentObserver*>(*i))
+        if (FragmentObserver* observer = dynamic_cast<FragmentObserver*>(*i))
 	  observer->onDestroy(*(*f));
       }
-      
+
       // Notify node observers.
       const MaterialNode::ObserverList& nObservers = node->getObservers();
       for (MaterialNode::ObserverList::const_iterator i = nObservers.begin();  i != nObservers.end();  i++)
@@ -397,28 +397,28 @@ void MaterialNode::receiveFragmentDestroy(void* user,
       }
 
       delete *f;
-      
+
       node->mFragments.erase(f);
       node->updateStructureVersion();
 
       //delete *f; SLAS::TMP
       //    Fragment* frag = *f;
-      
+
       // SLAS::TMP
       /*
       for (Fragment::ObserverList::const_iterator i = fObservers.begin();  i != fObservers.end();  i++)
       {
-      	if (FragmentObserver* observer = dynamic_cast<FragmentObserver*>(*i))
-      	observer->postDestroy(*frag);
+        if (FragmentObserver* observer = dynamic_cast<FragmentObserver*>(*i))
+          observer->postDestroy(*frag);
       }
-      
+
       for (MaterialNode::ObserverList::const_iterator i = nObservers.begin();  i != nObservers.end();  i++)
       {
 	      if (MaterialNodeObserver* observer = dynamic_cast<MaterialNodeObserver*>(*i))
             observer->postDestroyFragment(*node, *frag);
       }
       */
-      
+
       //delete frag; // SLAS::TMP
 
       break;

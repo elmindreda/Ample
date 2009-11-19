@@ -187,7 +187,7 @@ template <typename T>
 inline void Vector3<T>::scaleTo(T len)
 {
   const T scale = len / length();
-  
+
   x *= scale;
   y *= scale;
   z *= scale;
@@ -197,7 +197,7 @@ template <typename T>
 inline void Vector3<T>::mirrorBy(const Vector3<T>& vector)
 {
   const T scale = 2.f * (x * vector.x + y * vector.y + z * vector.z);
-  
+
   x = vector.x * scale - x;
   y = vector.y * scale - y;
   z = vector.z * scale - z;
@@ -215,7 +215,7 @@ template <typename T>
 inline void Vector3<T>::normalize(void)
 {
   const T scale = 1.f / length();
-  
+
   x *= scale;
   y *= scale;
   z *= scale;
@@ -398,12 +398,12 @@ inline void ColorRGB::clamp(void)
     r = 1.f;
   else if (r < 0.f)
     r = 0.f;
-  
+
   if (g > 1.f)
     g = 1.f;
   else if (g < 0.f)
     g = 0.f;
-  
+
   if (b > 1.f)
     b = 1.f;
   else if (b < 0.f)

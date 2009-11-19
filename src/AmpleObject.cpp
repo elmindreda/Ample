@@ -916,18 +916,18 @@ void ObjectNode::receiveTransformPosReal64(void* user,
     return;
 
   // TODO: Add observer notifications.
-  
+
   if (position)
   {
     Vector3d pos(position[0], position[1], position[2]);
-    
+
     const ObserverList& observers = node->getObservers();
     for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     {
       if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
         observer->onSetPosition(*node, pos);
     }
-    
+
     node->mTranslation.mPosition.set(position[0], position[1], position[2]);
     node->mTranslationCache.mPosition = node->mTranslation.mPosition;
   }
@@ -973,18 +973,18 @@ void ObjectNode::receiveTransformRotReal64(void* user,
     return;
 
   // TODO: Add observer notifications.
-  
+
   if (rotation)
   {
     Quaternion64 rot(rotation->x, rotation->y, rotation->z, rotation->w);
-    
+
     const ObserverList& observers = node->getObservers();
     for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     {
       if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
         observer->onSetRotation(*node, rot);
     }
-    
+
     node->mRotation.mRotation = *rotation;
     node->mRotationCache.mRotation = *rotation;
   }
@@ -1150,7 +1150,7 @@ void ObjectNode::receiveMethodGroupCreate(void* user, VNodeID nodeID, uint16 gro
       const MethodGroup::ObserverList& observers = group->getObservers();
       for (MethodGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*group, name);
-	
+
       group->mName = name;
       group->updateDataVersion();
     }
@@ -1160,14 +1160,14 @@ void ObjectNode::receiveMethodGroupCreate(void* user, VNodeID nodeID, uint16 gro
     group = new MethodGroup(groupID, name, *node);
     node->mGroups.push_back(group);
     node->updateStructureVersion();
-    
+
     const ObserverList& observers = node->getObservers();
     for (ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
     {
       if (ObjectNodeObserver* observer = dynamic_cast<ObjectNodeObserver*>(*i))
         observer->onCreateMethodGroup(*node, *group);
     }
-    
+
     verse_send_o_method_group_subscribe(node->getID(), groupID);
   }
 }
@@ -1191,7 +1191,7 @@ void ObjectNode::receiveMethodGroupDestroy(void* user, VNodeID nodeID, uint16 gr
         for (MethodGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
           (*observer)->onDestroy(**group);
       }
-      
+
       // Notify node observers.
       {
         const Node::ObserverList& observers = node->getObservers();
@@ -1201,7 +1201,7 @@ void ObjectNode::receiveMethodGroupDestroy(void* user, VNodeID nodeID, uint16 gr
             observer->onDestroyMethodGroup(*node, **group);
         }
       }
-      
+
       delete *group;
       groups.erase(group);
 

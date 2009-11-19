@@ -112,7 +112,7 @@ VNodeType Node::getType(void) const
 {
   return mType;
 }
-  
+
 const std::string& Node::getName(void) const
 {
   return mName;
@@ -169,13 +169,13 @@ void Node::receiveNodeNameSet(void* user, VNodeID ID, const char* name)
   Node* node = session->getNodeByID(ID);
   if (!node)
     return;
-  
+
   if (node->mName != name)
   {
     const Node::ObserverList& observers = node->getObservers();
     for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       (*i)->onSetName(*node, name);
-    
+
     node->mName = name;
     node->updateDataVersion();
   }
@@ -197,7 +197,7 @@ void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const c
       const TagGroup::ObserverList& observers = group->getObservers();
       for (TagGroup::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*group, name);
-	
+
       group->mName = name;
       group->updateDataVersion();
     }
@@ -207,11 +207,11 @@ void Node::receiveTagGroupCreate(void* user, VNodeID ID, uint16 groupID, const c
     group = new TagGroup(groupID, name, *node);
     node->mGroups.push_back(group);
     node->updateStructureVersion();
-    
+
     const Node::ObserverList& observers = node->getObservers();
     for (Node::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
       (*i)->onCreateTagGroup(*node, *group);
-    
+
     verse_send_tag_group_subscribe(node->getID(), groupID);
   }
 }
@@ -235,14 +235,14 @@ void Node::receiveTagGroupDestroy(void* user, VNodeID ID, uint16 groupID)
         for (TagGroup::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
           (*observer)->onDestroy(*(*group));
       }
-      
+
       // Notify node observers.
       {
         const Node::ObserverList& observers = node->getObservers();
         for (Node::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
           (*observer)->onDestroyTagGroup(*node, *(*group));
       }
-      
+
       delete *group;
       groups.erase(group);
 
