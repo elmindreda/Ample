@@ -9,19 +9,6 @@ Many thanks to brecht and slas for suggestions, bug reports and patches.
 The (temporary) website for Ample is:
 http://www.elmindreda.org/verse/ample/
 
-To retrieve Ample from anonymous CVS, use:
-
-  cvs -d:pserver:anonymous@cvs.blender.org:/cvsroot/verse co ample
-
-If you are on a Unix operating system and you just checked this out from CVS,
-you will want to run bootstrap.sh to get a configure script.
-
-Otherwise, you will probably want to make a Visual Studio project file.  I
-don't provide one just yet.
-
-I know that the internals aren't very OO yet, but I've begun work on correcting
-that.
-
 Note that I'm aiming for API completeness first, so most lookups are still O(n)
 or worse and thus it should scale very poorly.  The API is designed to allow
 for more efficient algorithms, however.
