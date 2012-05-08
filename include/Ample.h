@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------
 // Simple C++ retained mode library for Verse
 // Copyright (c) PDC, KTH
-// Written by Camilla Berglund <clb@kth.se>
+// Written by Camilla Berglund <elmindreda@elmindreda.org>
 //---------------------------------------------------------------------
 
 #ifndef __AMPLE_H__

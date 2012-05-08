@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////
 // (Modified from the) Wendy core library
-// Copyright (C) 2004 Camilla Berglund <camilla.berglund@gmail.com>
+// Copyright (C) 2004 Camilla Berglund <elmindreda@elmindreda.org>
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any
@@ -377,7 +377,7 @@ inline void Vector3<T>::set(T sx, T sy, T sz)
   x = sx;
   y = sy;
   z = sz;
-}	
+}
 
 //---------------------------------------------------------------------
 

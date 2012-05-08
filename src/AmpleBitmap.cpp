@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------
 // Simple C++ retained mode library for Verse
 // Copyright (c) PDC, KTH
-// Written by Camilla Berglund <clb@kth.se>
+// Written by Camilla Berglund <elmindreda@elmindreda.org>
 //---------------------------------------------------------------------
 
 #include <verse.h>
@@ -267,7 +267,7 @@ void BitmapNode::receiveLayerCreate(void* user,
       const BitmapLayer::ObserverList& observers = layer->getObservers();
       for (BitmapLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetName(*layer, name);
-	
+
       layer->mName = name;
       layer->updateDataVersion();
     }
@@ -277,7 +277,7 @@ void BitmapNode::receiveLayerCreate(void* user,
       const BitmapLayer::ObserverList& observers = layer->getObservers();
       for (BitmapLayer::ObserverList::const_iterator i = observers.begin();  i != observers.end();  i++)
 	(*i)->onSetType(*layer, type);
-	
+
       // TODO: Convert layer data.
 
       layer->mType = type;
@@ -315,7 +315,7 @@ void BitmapNode::receiveLayerDestroy(void* user, VNodeID nodeID, VLayerID layerI
   {
     if ((*layer)->getID() == layerID)
     {
-      // Notify tag group observers.
+      // Notify layer observers.
       {
         const BitmapLayer::ObserverList& observers = (*layer)->getObservers();
         for (BitmapLayer::ObserverList::const_iterator observer = observers.begin();  observer != observers.end();  observer++)
